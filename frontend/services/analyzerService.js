@@ -206,22 +206,25 @@ actions[operation]();`,
         });
       }
 
-      // Rule: Loose equality (JS/TS only)
-      if ((lang === 'javascript' || lang === 'typescript') && line.text.match(/[^=]==[^=]/) && !line.text.includes("null")) {
-        issues.push({
-          id: crypto.randomUUID(),
-          ruleId: "no-loose-equality",
-          message: "Usage of '==' detected. Use '===' for strict equality.",
-          line: line.number,
-          column: line.text.indexOf("=="),
-          severity: "LOW",
-          category: "BUG",
-          suggestion: `Strict equality (===) is safer and avoids unexpected type coercion issues.
+      // Rule: Loose equality (JS/TS only) - Must not match !== or ===
+      if ((lang === 'javascript' || lang === 'typescript') && !line.text.includes("null")) {
+        // Use a more precise regex that doesn't match !== or ===
+        if (line.text.match(/[^=!]={2}[^=]/) || line.text.match(/^={2}[^=]/) || line.text.match(/[^=!]={2}$/)) {
+          issues.push({
+            id: crypto.randomUUID(),
+            ruleId: "no-loose-equality",
+            message: "Usage of '==' detected. Use '===' for strict equality.",
+            line: line.number,
+            column: line.text.indexOf("=="),
+            severity: "LOW",
+            category: "BUG",
+            suggestion: `Strict equality (===) is safer and avoids unexpected type coercion issues.
 
 Replace '==' with '===':
 if (value === 0) { ... }  // Instead of: if (value == 0)`,
-          problematicCode: line.text.trim(),
-        });
+            problematicCode: line.text.trim(),
+          });
+        }
       }
 
       // JS Specific Security
