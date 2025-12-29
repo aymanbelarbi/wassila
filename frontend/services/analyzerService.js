@@ -1,16 +1,13 @@
-// Simple static code analyzer written in plain JavaScript.
-// It returns an array of "issue" objects describing problems in the code.
-
 export class AnalyzerService {
   constructor() {
     this.lines = [];
   }
 
-  analyze(code, language = 'javascript') {
+  analyze(code, language = "javascript") {
     this.lines = code.split("\n").map((text, i) => ({ text, number: i + 1 }));
     const issues = [];
     this.lastCondition = null;
-    const lang = (language || 'javascript').toLowerCase();
+    const lang = (language || "javascript").toLowerCase();
 
     issues.push(...this.checkStyle(lang));
     issues.push(...this.checkSecurity(lang));
@@ -20,12 +17,10 @@ export class AnalyzerService {
     return issues;
   }
 
-  // Style related checks
   checkStyle(lang) {
     const issues = [];
     this.lines.forEach((line) => {
-      // Common: Line too long (Relaxed for JSX/TSX)
-      const maxLen = (lang === 'typescript' || lang === 'javascript') ? 160 : 120;
+      const maxLen = lang === "typescript" || lang === "javascript" ? 160 : 120;
       if (line.text.length > maxLen) {
         issues.push({
           id: crypto.randomUUID(),
@@ -45,9 +40,10 @@ const longString = "part1" +
         });
       }
 
-      // JS/TS Specific
-      if (lang === 'javascript' || lang === 'typescript') {
-        const isCommented = line.text.trim().startsWith('//') || line.text.trim().startsWith('/*');
+      if (lang === "javascript" || lang === "typescript") {
+        const isCommented =
+          line.text.trim().startsWith("//") ||
+          line.text.trim().startsWith("/*");
         if (!isCommented && line.text.includes("console.log")) {
           issues.push({
             id: crypto.randomUUID(),
@@ -88,7 +84,8 @@ let counter = 0;`,
           issues.push({
             id: crypto.randomUUID(),
             ruleId: "naming-convention",
-            message: "Variable naming convention violation (snake_case detected).",
+            message:
+              "Variable naming convention violation (snake_case detected).",
             line: line.number,
             column: 0,
             severity: "INFO",
@@ -103,8 +100,7 @@ function getUserData() {} // instead of get_user_data`,
         }
       }
 
-      // Python Specific
-      if (lang === 'python') {
+      if (lang === "python") {
         if (line.text.match(/\bprint\s*\(/)) {
           issues.push({
             id: crypto.randomUUID(),
@@ -124,29 +120,36 @@ logger.info("your message")`,
             problematicCode: line.text.trim(),
           });
         }
-        if (line.text.match(/\b[A-Z][a-zA-Z0-9]*\s*=[^=]/) || line.text.match(/\b[a-z]+[A-Z][a-zA-Z0-9]*\s*=[^=]/)) {
-            // Check for PascalCase or camelCase variable names (Python prefers snake_case)
-            issues.push({
-              id: crypto.randomUUID(),
-              ruleId: "naming-convention",
-              message: "Variable naming convention violation (non snake_case detected).",
-              line: line.number,
-              column: 0,
-              severity: "INFO",
-              category: "STYLE",
-              suggestion: `Python variables should use snake_case for better readability and PEP-8 compliance.
+        if (
+          line.text.match(/\b[A-Z][a-zA-Z0-9]*\s*=[^=]/) ||
+          line.text.match(/\b[a-z]+[A-Z][a-zA-Z0-9]*\s*=[^=]/)
+        ) {
+          issues.push({
+            id: crypto.randomUUID(),
+            ruleId: "naming-convention",
+            message:
+              "Variable naming convention violation (non snake_case detected).",
+            line: line.number,
+            column: 0,
+            severity: "INFO",
+            category: "STYLE",
+            suggestion: `Python variables should use snake_case for better readability and PEP-8 compliance.
 ---CODE---
 # Use snake_case
 user_name = "John"  
 # Avoid: userName or UserName`,
-              problematicCode: line.text.trim(),
-            });
-          }
-        if (line.text.match(/\bdef\s+[A-Z]/) || line.text.match(/\bdef\s+[a-z]+[A-Z]/)) {
+            problematicCode: line.text.trim(),
+          });
+        }
+        if (
+          line.text.match(/\bdef\s+[A-Z]/) ||
+          line.text.match(/\bdef\s+[a-z]+[A-Z]/)
+        ) {
           issues.push({
             id: crypto.randomUUID(),
             ruleId: "naming-convention",
-            message: "Function naming convention violation (non snake_case detected).",
+            message:
+              "Function naming convention violation (non snake_case detected).",
             line: line.number,
             column: 0,
             severity: "INFO",
@@ -162,8 +165,7 @@ def process_data():
         }
       }
 
-      // PHP Specific
-      if (lang === 'php') {
+      if (lang === "php") {
         if (line.text.match(/\becho\s+/) || line.text.match(/\bprint\s+/)) {
           issues.push({
             id: crypto.randomUUID(),
@@ -184,32 +186,30 @@ return response()->json(['data' => $value]);
           });
         }
         if (line.text.includes("<? ") || line.text.includes("<?\n")) {
-            issues.push({
-              id: crypto.randomUUID(),
-              ruleId: "no-short-tags",
-              message: "Avoid using PHP short tags.",
-              line: line.number,
-              column: 0,
-              severity: "MEDIUM",
-              category: "STYLE",
-              suggestion: `Short tags (<?) are not supported on all servers. Use the full tag.
+          issues.push({
+            id: crypto.randomUUID(),
+            ruleId: "no-short-tags",
+            message: "Avoid using PHP short tags.",
+            line: line.number,
+            column: 0,
+            severity: "MEDIUM",
+            category: "STYLE",
+            suggestion: `Short tags (<?) are not supported on all servers. Use the full tag.
 ---CODE---
 <?php
 // Your code here
 ?>`,
-              problematicCode: line.text.trim(),
-            });
-          }
+            problematicCode: line.text.trim(),
+          });
+        }
       }
     });
     return issues;
   }
 
-  // Security related checks
   checkSecurity(lang) {
     const issues = [];
     this.lines.forEach((line) => {
-      // Rule: No eval
       if (line.text.match(/\beval\s*\(/)) {
         issues.push({
           id: crypto.randomUUID(),
@@ -233,10 +233,15 @@ const result = actions[operation](x, y);`,
         });
       }
 
-      // Rule: Loose equality (JS/TS only) - Must not match !== or ===
-      if ((lang === 'javascript' || lang === 'typescript') && !line.text.includes("null")) {
-        // Use a more precise regex that doesn't match !== or ===
-        if (line.text.match(/[^=!]={2}[^=]/) || line.text.match(/^={2}[^=]/) || line.text.match(/[^=!]={2}$/)) {
+      if (
+        (lang === "javascript" || lang === "typescript") &&
+        !line.text.includes("null")
+      ) {
+        if (
+          line.text.match(/[^=!]={2}[^=]/) ||
+          line.text.match(/^={2}[^=]/) ||
+          line.text.match(/[^=!]={2}$/)
+        ) {
           issues.push({
             id: crypto.randomUUID(),
             ruleId: "no-loose-equality",
@@ -256,9 +261,11 @@ if (value === 0) {
         }
       }
 
-      // JS Specific Security
-      if (lang === 'javascript' || lang === 'typescript') {
-        if (line.text.match(/\.innerHTML\s*=/) || line.text.match(/dangerouslySetInnerHTML/)) {
+      if (lang === "javascript" || lang === "typescript") {
+        if (
+          line.text.match(/\.innerHTML\s*=/) ||
+          line.text.match(/dangerouslySetInnerHTML/)
+        ) {
           issues.push({
             id: crypto.randomUUID(),
             ruleId: "xss-risk",
@@ -281,8 +288,7 @@ parent.appendChild(div);`,
         }
       }
 
-      // PHP Specific Security
-      if (lang === 'php') {
+      if (lang === "php") {
         if (line.text.match(/\b(mysql_query|mysqli_query)\s*\(/)) {
           issues.push({
             id: crypto.randomUUID(),
@@ -303,10 +309,11 @@ $user = $stmt->fetch();`,
         }
       }
 
-      // Rule: Hardcoded secrets
-      const secretRegex = /['"](AIza|sk-proj-|ghp_|glpat-)[a-zA-Z0-9_\-]{20,}['"]/;
-      const genericSecretRegex = /\b(PASSWORD|SECRET|TOKEN|KEY)\s*=\s*['"][^'"]{6,}['"]/i;
-      
+      const secretRegex =
+        /['"](AIza|sk-proj-|ghp_|glpat-)[a-zA-Z0-9_\-]{20,}['"]/;
+      const genericSecretRegex =
+        /\b(PASSWORD|SECRET|TOKEN|KEY)\s*=\s*['"][^'"]{6,}['"]/i;
+
       if (line.text.match(secretRegex) || line.text.match(genericSecretRegex)) {
         issues.push({
           id: crypto.randomUUID(),
@@ -330,12 +337,11 @@ const apiKey = import.meta.env.VITE_API_KEY;`,
     return issues;
   }
 
-  // Very simple complexity check based on indentation
   checkComplexity(lang) {
     const issues = [];
     this.lines.forEach((line) => {
       const indentation = line.text.search(/\S/);
-      const maxIndentation = lang === 'python' ? 16 : 20; // Python is indentation sensitive
+      const maxIndentation = lang === "python" ? 16 : 20;
       if (indentation > maxIndentation) {
         issues.push({
           id: crypto.randomUUID(),
@@ -361,8 +367,6 @@ items.forEach(handleItem);`,
     return issues;
   }
 
-  // New: Check for TODOs, Empty Catch, and Debugger
-  // Technical debt and debug helpers
   checkTechDebt(lang) {
     const issues = [];
     this.lines.forEach((line) => {
@@ -380,16 +384,19 @@ items.forEach(handleItem);`,
           problematicCode: line.text.trim(),
         });
       }
-      
-      // Duplicated logic hint (looks for duplicated conditions in if/else if)
+
       if (line.text.includes("if")) {
         const currentCondition = line.text.match(/\((.*)\)/)?.[1]?.trim();
         if (currentCondition) {
-          if (this.lastCondition === currentCondition && line.text.includes("else if")) {
-             issues.push({
+          if (
+            this.lastCondition === currentCondition &&
+            line.text.includes("else if")
+          ) {
+            issues.push({
               id: crypto.randomUUID(),
               ruleId: "duplicate-condition",
-              message: "Possible duplicated condition detected in if/else if chain.",
+              message:
+                "Possible duplicated condition detected in if/else if chain.",
               line: line.number,
               severity: "HIGH",
               category: "BUG",
@@ -406,16 +413,14 @@ if (x === 1) {
           }
           this.lastCondition = currentCondition;
         }
-      } else if (!line.text.trim().startsWith("}") && !line.text.trim().startsWith("else")) {
-        // Reset last condition if we are outside the if/else if block
-        // (This is a simplified heuristic)
+      } else if (
+        !line.text.trim().startsWith("}") &&
+        !line.text.trim().startsWith("else")
+      ) {
         if (line.text.trim().length > 0) {
-          // this.lastCondition = null; 
-          // Actually, let's just keep it simple for now or it gets messy
         }
       }
 
-      // Rule: Empty catch block
       if (line.text.match(/catch\s*\(.*\)\s*\{\s*\}/)) {
         issues.push({
           id: crypto.randomUUID(),
@@ -437,7 +442,6 @@ try {
         });
       }
 
-      // Rule: Debugger statement
       if (line.text.includes("debugger;")) {
         issues.push({
           id: crypto.randomUUID(),
@@ -455,38 +459,36 @@ debugger;`,
         });
       }
 
-      // PHP Specific Debt
-      if (lang === 'php') {
-          if (line.text.match(/\b(die|exit)\s*[\(;]/)) {
-              issues.push({
-                id: crypto.randomUUID(),
-                ruleId: "no-die",
-                message: "Avoid using die() or exit().",
-                line: line.number,
-                column: 0,
-                severity: "MEDIUM",
-                category: "BUG_RISK",
-                suggestion: `Abruptly stopping the script is bad helper practice.
+      if (lang === "php") {
+        if (line.text.match(/\b(die|exit)\s*[\(;]/)) {
+          issues.push({
+            id: crypto.randomUUID(),
+            ruleId: "no-die",
+            message: "Avoid using die() or exit().",
+            line: line.number,
+            column: 0,
+            severity: "MEDIUM",
+            category: "BUG_RISK",
+            suggestion: `Abruptly stopping the script is bad helper practice.
 ---CODE---
 // Throw an exception instead
 throw new \RuntimeException("Error occurred");`,
-                problematicCode: line.text.trim(),
-              });
-          }
+            problematicCode: line.text.trim(),
+          });
+        }
       }
 
-      // Python Specific Debt
-      if (lang === 'python') {
-          if (line.text.match(/\bexcept:\s*(#.*)?$/)) {
-              issues.push({
-                id: crypto.randomUUID(),
-                ruleId: "no-bare-except",
-                message: "Avoid bare 'except:'.",
-                line: line.number,
-                column: 0,
-                severity: "MEDIUM",
-                category: "BUG_RISK",
-                suggestion: `Bare 'except:' catches everything, including SystemExit, making it hard to stop scripts.
+      if (lang === "python") {
+        if (line.text.match(/\bexcept:\s*(#.*)?$/)) {
+          issues.push({
+            id: crypto.randomUUID(),
+            ruleId: "no-bare-except",
+            message: "Avoid bare 'except:'.",
+            line: line.number,
+            column: 0,
+            severity: "MEDIUM",
+            category: "BUG_RISK",
+            suggestion: `Bare 'except:' catches everything, including SystemExit, making it hard to stop scripts.
 ---CODE---
 # Catch Exception instead
 try:
@@ -494,9 +496,9 @@ try:
 except ValueError as e:
     logger.error(f"Error: {e}")
 # Or use: except Exception as e:`,
-                problematicCode: line.text.trim(),
-              });
-          }
+            problematicCode: line.text.trim(),
+          });
+        }
       }
     });
     return issues;

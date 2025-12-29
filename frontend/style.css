@@ -2,14 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom styles */
 @layer base {
   body {
     @apply bg-background text-slate-100 min-h-screen;
   }
 }
 
-/* Animations */
 @keyframes fadeIn {
   from {
     opacity: 0;

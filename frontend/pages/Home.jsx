@@ -5,7 +5,7 @@ import { ShieldCheck, Code2, Zap, Lock, Cpu, ArrowRight } from "lucide-react";
 function Home() {
   return (
     <div className="min-h-screen bg-background text-white selection:bg-primary selection:text-white overflow-x-hidden">
-      {/* Navbar */}
+      {}
       <nav className="border-b border-border/40 backdrop-blur-md fixed w-full z-50 bg-background/80">
         <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3 font-bold text-lg md:text-xl tracking-tight">
@@ -31,9 +31,9 @@ function Home() {
         </div>
       </nav>
 
-      {/* Hero */}
+      {}
       <div className="pt-28 pb-16 md:pt-32 md:pb-20 px-4 md:px-6 max-w-7xl mx-auto text-center relative z-10">
-        {/* Background Glow */}
+        {}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-primary/20 rounded-full blur-[100px] -z-10 pointer-events-none"></div>
 
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-border/50 text-[10px] md:text-xs font-mono text-primary mb-6 animate-fade-in border border-primary/10">
@@ -74,7 +74,7 @@ function Home() {
         </div>
       </div>
 
-      {/* Features Grid */}
+      {}
       <div className="py-16 md:py-20 bg-surface/30 border-y border-border/30">
         <div className="max-w-7xl mx-auto px-4 md:px-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
@@ -118,7 +118,7 @@ function Home() {
         </div>
       </div>
 
-      {/* Footer */}
+      {}
       <div className="py-8 text-center text-slate-600 text-xs md:text-sm border-t border-border/20">
         <p>&copy; 2026 Wassila. Built for excellence.</p>
       </div>

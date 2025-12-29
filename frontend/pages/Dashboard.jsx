@@ -71,7 +71,6 @@ function Dashboard() {
         setAvgSecurity(Math.round(avg));
       }
 
-      // 1. Trend Data (Last 10 Scans over time)
       const chartData = [...allScans]
         .slice(0, 10)
         .reverse()
@@ -87,7 +86,6 @@ function Dashboard() {
         }));
       setTrendData(chartData);
 
-      // 2. Severity Distribution (Across latest scans)
       let critical = 0,
         high = 0,
         medium = 0,
@@ -102,10 +100,10 @@ function Dashboard() {
       });
 
       const distData = [
-        { name: "Critical", value: critical, color: "#ef4444" }, // red-500
-        { name: "High", value: high, color: "#f97316" }, // orange-500
-        { name: "Medium", value: medium, color: "#eab308" }, // yellow-500
-        { name: "Low", value: low, color: "#3b82f6" }, // blue-500
+        { name: "Critical", value: critical, color: "#ef4444" },
+        { name: "High", value: high, color: "#f97316" },
+        { name: "Medium", value: medium, color: "#eab308" },
+        { name: "Low", value: low, color: "#3b82f6" },
       ].filter((d) => d.value > 0);
 
       if (distData.length === 0 && latestScans.length > 0) {
@@ -115,7 +113,6 @@ function Dashboard() {
     }
   }, [user]);
 
-  // Small helper component for the chart tooltip
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
@@ -158,7 +155,7 @@ function Dashboard() {
         </Link>
       </div>
 
-      {/* Stats Grid */}
+      {}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {[
           {
@@ -224,9 +221,9 @@ function Dashboard() {
         ))}
       </div>
 
-      {/* Visual Analytics */}
+      {}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Trend Chart */}
+        {}
         <div className="bg-surface rounded-2xl border border-border shadow-sm p-6 flex flex-col">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-base font-bold text-white flex items-center gap-2">
@@ -288,7 +285,7 @@ function Dashboard() {
           </div>
         </div>
 
-        {/* Severity Chart */}
+        {}
         <div className="bg-surface rounded-2xl border border-border shadow-sm p-6 flex flex-col">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-base font-bold text-white flex items-center gap-2">
@@ -345,7 +342,7 @@ function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Recent Activity Section */}
+        {}
         <div className="lg:col-span-2 bg-surface rounded-2xl border border-border shadow-sm flex flex-col overflow-hidden">
           <div className="p-6 border-b border-border flex justify-between items-center bg-slate-900/30">
             <h3 className="text-base font-bold text-white flex items-center gap-2">
@@ -435,7 +432,7 @@ function Dashboard() {
           </div>
         </div>
 
-        {/* Quick Actions / Tips */}
+        {}
         <div className="bg-gradient-to-b from-primary/10 to-transparent rounded-2xl border border-primary/20 p-6 flex flex-col relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 blur-[80px] rounded-full pointer-events-none -z-10"></div>
 

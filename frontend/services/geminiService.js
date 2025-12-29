@@ -14,7 +14,7 @@ class GeminiService {
     }
   }
 
-  async reviewCode(code, staticIssues, language = 'javascript') {
+  async reviewCode(code, staticIssues, language = "javascript") {
     if (this.apiKeyError || !this.ai) {
       const error = new Error("API key not configured");
       error.userMessage =
@@ -111,7 +111,8 @@ class GeminiService {
             properties: {
               summary: {
                 type: "string",
-                description: "A concise, cohesive paragraph summarizing the code improvements. Focus on high-level impact like security and readability.",
+                description:
+                  "A concise, cohesive paragraph summarizing the code improvements. Focus on high-level impact like security and readability.",
               },
               fixedCode: {
                 type: "string",
@@ -135,11 +136,12 @@ class GeminiService {
       };
     } catch (error) {
       console.error("Gemini API Error Detail:", error);
-      
+
       const status = error.status || (error.response && error.response.status);
-      
+
       if (status === 429) {
-        const errorMsg = "Gemini API rate limit exceeded. Since you're using a new account, this is likely a temporary quota lock (5-10 mins). Please try again shortly.";
+        const errorMsg =
+          "Gemini API rate limit exceeded. Since you're using a new account, this is likely a temporary quota lock (5-10 mins). Please try again shortly.";
         const apiError = new Error("Rate limit exceeded");
         apiError.userMessage = errorMsg;
         apiError.status = 429;

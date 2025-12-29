@@ -30,13 +30,11 @@ import {
 function ProjectDetails() {
   const { id } = useParams();
 
-  // State
   const [project, setProject] = useState(null);
   const [files, setFiles] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
   const [scan, setScan] = useState(null);
 
-  // UI State
   const [isScanning, setIsScanning] = useState(false);
   const [activeTab, setActiveTab] = useState("editor");
   const [showNewFileModal, setShowNewFileModal] = useState(false);
@@ -47,15 +45,13 @@ function ProjectDetails() {
   const [unsavedContent, setUnsavedContent] = useState("");
   const [isCopied, setIsCopied] = useState(false);
   const [scanError, setScanError] = useState(null);
-  
-  // Edit File State
+
   const [editingFile, setEditingFile] = useState(null);
   const [editName, setEditName] = useState("");
-  
-  // Validation State
-  const [validationMsg, setValidationMsg] = useState('');
+
+  const [validationMsg, setValidationMsg] = useState("");
   const [isValidCode, setIsValidCode] = useState(true);
-  const [fileError, setFileError] = useState('');
+  const [fileError, setFileError] = useState("");
 
   const editorRef = useRef(null);
   const lineNumbersRef = useRef(null);
@@ -102,7 +98,7 @@ function ProjectDetails() {
   const handleCreateFile = (e) => {
     e.preventDefault();
     if (!project) return;
-    setFileError('');
+    setFileError("");
 
     const extension =
       newFileForm.language === "javascript"
@@ -110,10 +106,10 @@ function ProjectDetails() {
         : newFileForm.language === "php"
         ? "php"
         : "py";
-    
+
     const finalName = newFileForm.name.endsWith(`.${extension}`)
-        ? newFileForm.name
-        : `${newFileForm.name}.${extension}`;
+      ? newFileForm.name
+      : `${newFileForm.name}.${extension}`;
 
     try {
       const newFile = {
@@ -130,7 +126,7 @@ function ProjectDetails() {
       setNewFileForm({ name: "", language: "javascript" });
       selectFile(newFile);
     } catch (e) {
-      setFileError(e.message || 'Failed to create file');
+      setFileError(e.message || "Failed to create file");
     }
   };
 
@@ -151,38 +147,43 @@ function ProjectDetails() {
     e.preventDefault();
     e.stopPropagation();
     setEditingFile(file);
-    setFileError('');
-    // Strip extension for the input field
-    const nameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+    setFileError("");
+
+    const nameWithoutExt =
+      file.name.substring(0, file.name.lastIndexOf(".")) || file.name;
     setEditName(nameWithoutExt);
   };
 
   const handleUpdateFile = (e) => {
     e.preventDefault();
-    setFileError('');
+    setFileError("");
     if (editingFile && editName.trim()) {
       try {
-        const extension = editingFile.language === "javascript" ? "js" : editingFile.language === "php" ? "php" : "py";
-        // Always append the correct extension
+        const extension =
+          editingFile.language === "javascript"
+            ? "js"
+            : editingFile.language === "php"
+            ? "php"
+            : "py";
+
         let finalName = editName.trim();
-        // If user typed extension, strip it first to ensure we don't double it or allow changing it
+
         if (finalName.endsWith(`.${extension}`)) {
-            finalName = finalName.slice(0, -(extension.length + 1));
+          finalName = finalName.slice(0, -(extension.length + 1));
         }
         finalName = `${finalName}.${extension}`;
 
         const updatedFile = { ...editingFile, name: finalName };
         storageService.files.update(updatedFile);
-        
-        // Update local state
-        setFiles(files.map(f => f.id === updatedFile.id ? updatedFile : f));
+
+        setFiles(files.map((f) => (f.id === updatedFile.id ? updatedFile : f)));
         if (selectedFile?.id === updatedFile.id) {
-            setSelectedFile(updatedFile);
+          setSelectedFile(updatedFile);
         }
-        
+
         setEditingFile(null);
       } catch (e) {
-        setFileError(e.message || 'Failed to update file');
+        setFileError(e.message || "Failed to update file");
       }
     }
   };
@@ -203,13 +204,15 @@ function ProjectDetails() {
     }
   };
 
-  // Debounced validation
   useEffect(() => {
     const timer = setTimeout(() => {
-        if (!selectedFile) return;
-        const result = languageDetector.validate(unsavedContent, selectedFile.language);
-        setIsValidCode(result.isValid);
-        setValidationMsg(result.message);
+      if (!selectedFile) return;
+      const result = languageDetector.validate(
+        unsavedContent,
+        selectedFile.language
+      );
+      setIsValidCode(result.isValid);
+      setValidationMsg(result.message);
     }, 50);
 
     return () => clearTimeout(timer);
@@ -242,12 +245,13 @@ function ProjectDetails() {
     setActiveTab("issues");
 
     try {
-      // Smart Rescan Check
-      // If the current code matches the previously generated "fixed code", we skip the AI call
-      // and award a 100/100 immediately to save resources and provide instant gratification.
-      if (scan && scan.fixedCode && scan.fixedCode.trim() === unsavedContent.trim()) {
-        await new Promise(resolve => setTimeout(resolve, 3000)); // Simulate analysis delay for UX
-        
+      if (
+        scan &&
+        scan.fixedCode &&
+        scan.fixedCode.trim() === unsavedContent.trim()
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+
         const newScan = {
           id: crypto.randomUUID(),
           projectId: project.id,
@@ -255,10 +259,11 @@ function ProjectDetails() {
           timestamp: new Date().toISOString(),
           issues: [],
           score: 100,
-          aiSummary: "Smart Rescan Verified: The code matches the previously verified fix. Perfect score confirmed.",
-          fixedCode: unsavedContent, // The code is already perfect
+          aiSummary:
+            "Smart Rescan Verified: The code matches the previously verified fix. Perfect score confirmed.",
+          fixedCode: unsavedContent,
         };
-        
+
         storageService.scans.add(newScan);
         storageService.projects.update({
           ...project,
@@ -269,10 +274,16 @@ function ProjectDetails() {
         return;
       }
 
-      // Normal Scan Flow
-      const issues = analyzerService.analyze(unsavedContent, selectedFile.language);
+      const issues = analyzerService.analyze(
+        unsavedContent,
+        selectedFile.language
+      );
       const score = Math.max(0, 100 - issues.length * 5);
-      const aiResult = await geminiService.reviewCode(unsavedContent, issues, selectedFile.language);
+      const aiResult = await geminiService.reviewCode(
+        unsavedContent,
+        issues,
+        selectedFile.language
+      );
       const newScan = {
         id: crypto.randomUUID(),
         projectId: project.id,
@@ -312,7 +323,7 @@ function ProjectDetails() {
 
   return (
     <div className="h-[calc(100vh-100px)] flex flex-col md:flex-row gap-4 animate-fade-in overflow-hidden relative pb-4">
-      {/* LEFT SIDEBAR - FILE EXPLORER */}
+      {}
       <div className="w-full md:w-64 bg-surface rounded-xl border border-border flex flex-col h-48 md:h-full shrink-0 shadow-lg overflow-hidden">
         <div className="p-3 border-b border-border flex items-center justify-between bg-slate-900/50">
           <div className="flex items-center gap-2 text-slate-300 font-bold text-sm">
@@ -323,7 +334,7 @@ function ProjectDetails() {
           </div>
           <button
             onClick={() => {
-              setFileError('');
+              setFileError("");
               setShowNewFileModal(true);
             }}
             className="p-1.5 hover:bg-white/10 text-primary rounded-lg transition-colors"
@@ -340,7 +351,7 @@ function ProjectDetails() {
               <p className="text-xs text-slate-500 mb-2">No files yet.</p>
               <button
                 onClick={() => {
-                  setFileError('');
+                  setFileError("");
                   setShowNewFileModal(true);
                 }}
                 className="text-[10px] bg-primary/10 text-primary px-3 py-1.5 rounded-md font-bold hover:bg-primary/20 transition-colors"
@@ -403,37 +414,46 @@ function ProjectDetails() {
         </div>
       </div>
 
-      {/* MAIN CONTENT AREA */}
+      {}
       <div className="flex-1 bg-surface rounded-xl border border-border flex flex-col h-[500px] md:h-full overflow-hidden relative shadow-lg">
         {selectedFile ? (
           <>
-            {/* Editor Header */}
+            {}
             <div className="h-auto md:h-14 border-b border-border px-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shrink-0 bg-surface">
-              <div
-                className={`flex items-center gap-3 pt-3 md:pt-0`}
-              >
+              <div className={`flex items-center gap-3 pt-3 md:pt-0`}>
                 <FileCode size={18} className="text-slate-500" />
                 <span className="text-sm font-bold text-slate-200 truncate">
                   {selectedFile.name}
                 </span>
 
-                {/* Scan Error (Red format like Language Detector) */}
+                {}
                 {scanError && (
-                   <span className="text-[10px] bg-red-500/10 text-red-500 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-1.5 animate-fade-in truncate max-w-[300px]" title={scanError}>
+                  <span
+                    className="text-[10px] bg-red-500/10 text-red-500 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-1.5 animate-fade-in truncate max-w-[300px]"
+                    title={scanError}
+                  >
                     <AlertTriangle size={12} />
                     {scanError}
-                    <button onClick={(e) => { e.stopPropagation(); setScanError(null); }} className="hover:text-red-300 ml-1"><X size={10} /></button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setScanError(null);
+                      }}
+                      className="hover:text-red-300 ml-1"
+                    >
+                      <X size={10} />
+                    </button>
                   </span>
                 )}
 
-                {/* Inline Validation Warning */}
+                {}
                 {!isValidCode && !scanError && (
-                   <span className="text-[10px] bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-1.5 animate-fade-in">
+                  <span className="text-[10px] bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-1.5 animate-fade-in">
                     <AlertTriangle size={12} />
                     {validationMsg}
                   </span>
                 )}
-                
+
                 {selectedFile.content !== unsavedContent && isValidCode && (
                   <span className="text-[10px] bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
@@ -445,7 +465,9 @@ function ProjectDetails() {
               <div className="flex items-center gap-2 pb-3 md:pb-0">
                 <button
                   onClick={handleSaveContent}
-                  disabled={selectedFile.content === unsavedContent || !isValidCode}
+                  disabled={
+                    selectedFile.content === unsavedContent || !isValidCode
+                  }
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${
                     selectedFile.content !== unsavedContent && isValidCode
                       ? "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
@@ -457,9 +479,15 @@ function ProjectDetails() {
                 <div className="h-4 w-px bg-border mx-1"></div>
                 <button
                   onClick={handleRunScan}
-                  disabled={isScanning || !isValidCode || unsavedContent.trim().length === 0}
+                  disabled={
+                    isScanning ||
+                    !isValidCode ||
+                    unsavedContent.trim().length === 0
+                  }
                   className={`flex items-center gap-2 px-4 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider text-white shadow-lg transition-all ${
-                    isScanning || !isValidCode || unsavedContent.trim().length === 0
+                    isScanning ||
+                    !isValidCode ||
+                    unsavedContent.trim().length === 0
                       ? "bg-slate-700 cursor-not-allowed text-slate-400"
                       : "bg-primary hover:bg-blue-600 shadow-blue-900/20 active:scale-95"
                   }`}
@@ -474,7 +502,7 @@ function ProjectDetails() {
               </div>
             </div>
 
-            {/* Tabs */}
+            {}
             <div className="flex items-center justify-between border-b border-border bg-slate-950/30 shrink-0 pr-2">
               <div className="flex">
                 <button
@@ -509,7 +537,9 @@ function ProjectDetails() {
                 >
                   <Terminal size={14} /> Fixed Code
                   {scan && scan.score === 100 && (
-                    <span className="ml-1 text-[10px] text-emerald-500">✓ Perfect</span>
+                    <span className="ml-1 text-[10px] text-emerald-500">
+                      ✓ Perfect
+                    </span>
                   )}
                 </button>
               </div>
@@ -555,10 +585,10 @@ function ProjectDetails() {
               {activeTab === "issues" && scan && (
                 <div className="absolute inset-0 overflow-y-auto p-4 md:p-6 space-y-6 bg-slate-950">
                   <div className="max-w-5xl mx-auto space-y-6">
-                    {/* Score Card */}
+                    {}
                     <div className="flex flex-col md:flex-row items-center gap-6 bg-surface p-6 rounded-xl border border-border">
                       <div className="relative w-20 h-20 flex items-center justify-center shrink-0">
-                        {/* Fixed: Added viewBox to SVG for proper scaling */}
+                        {}
                         <svg
                           className="w-full h-full transform -rotate-90"
                           viewBox="0 0 80 80"
@@ -628,7 +658,7 @@ function ProjectDetails() {
                       </div>
                     </div>
 
-                    {/* AI Summary */}
+                    {}
                     <div className="bg-gradient-to-br from-primary/10 to-transparent p-6 rounded-xl border border-primary/20 relative overflow-hidden">
                       <div className="flex items-start gap-4 relative z-10">
                         <div className="p-2 bg-primary/20 rounded-lg shrink-0 text-primary">
@@ -645,7 +675,7 @@ function ProjectDetails() {
                       </div>
                     </div>
 
-                    {/* Issues List */}
+                    {}
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <h3 className="font-bold text-slate-300 pb-2 border-b border-border text-xs uppercase tracking-widest flex items-center gap-2">
@@ -805,47 +835,70 @@ function ProjectDetails() {
                                           </div>
                                         )}
 
-                                          {(() => {
-                                            const parts = issue.suggestion.split("---CODE---");
-                                            const description = parts.length > 1 ? parts[0] : issue.suggestion.split("\n")[0];
-                                            const fixCode = parts.length > 1 ? parts[1].trim() : issue.suggestion.split("\n").slice(1).join("\n").trim();
+                                        {(() => {
+                                          const parts =
+                                            issue.suggestion.split(
+                                              "---CODE---"
+                                            );
+                                          const description =
+                                            parts.length > 1
+                                              ? parts[0]
+                                              : issue.suggestion.split("\n")[0];
+                                          const fixCode =
+                                            parts.length > 1
+                                              ? parts[1].trim()
+                                              : issue.suggestion
+                                                  .split("\n")
+                                                  .slice(1)
+                                                  .join("\n")
+                                                  .trim();
 
-                                            return (
-                                              <>
-                                                <div className="bg-slate-900 p-3 rounded border border-slate-800">
-                                                  <p className="text-xs font-bold text-amber-500 uppercase tracking-wider mb-2">
-                                                    Why This is a Problem:
-                                                  </p>
-                                                  <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
-                                                    {description.trim()}
-                                                  </p>
-                                                </div>
+                                          return (
+                                            <>
+                                              <div className="bg-slate-900 p-3 rounded border border-slate-800">
+                                                <p className="text-xs font-bold text-amber-500 uppercase tracking-wider mb-2">
+                                                  Why This is a Problem:
+                                                </p>
+                                                <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
+                                                  {description.trim()}
+                                                </p>
+                                              </div>
 
-                                                <div className="bg-[#0d1117] p-3 rounded border border-emerald-500/30">
-                                                  <p className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2">
-                                                    How to Fix It:
-                                                  </p>
-                                                  <div className="bg-[#0d1117] p-2 rounded overflow-x-auto">
-                                                    <pre className="text-xs text-emerald-300 font-mono leading-relaxed">
-                                                      {fixCode ? (
-                                                        fixCode.split("\n").map((line, idx) => (
-                                                          <div key={idx} className="flex">
+                                              <div className="bg-[#0d1117] p-3 rounded border border-emerald-500/30">
+                                                <p className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2">
+                                                  How to Fix It:
+                                                </p>
+                                                <div className="bg-[#0d1117] p-2 rounded overflow-x-auto">
+                                                  <pre className="text-xs text-emerald-300 font-mono leading-relaxed">
+                                                    {fixCode ? (
+                                                      fixCode
+                                                        .split("\n")
+                                                        .map((line, idx) => (
+                                                          <div
+                                                            key={idx}
+                                                            className="flex"
+                                                          >
                                                             <span className="text-slate-600 mr-3 select-none w-4 text-right shrink-0">
                                                               {idx + 1}
                                                             </span>
-                                                            <span className="whitespace-pre">{line}</span>
+                                                            <span className="whitespace-pre">
+                                                              {line}
+                                                            </span>
                                                           </div>
                                                         ))
-                                                      ) : (
-                                                        <span className="text-slate-500 italic">No code example available.</span>
-                                                      )}
-                                                    </pre>
-                                                  </div>
+                                                    ) : (
+                                                      <span className="text-slate-500 italic">
+                                                        No code example
+                                                        available.
+                                                      </span>
+                                                    )}
+                                                  </pre>
                                                 </div>
-                                              </>
-                                            );
-                                          })()}
-                                    </div>
+                                              </div>
+                                            </>
+                                          );
+                                        })()}
+                                      </div>
                                     )}
                                   </div>
                                 </div>
@@ -870,7 +923,7 @@ function ProjectDetails() {
                         : 1}
                     </pre>
                   </div>
-                  {/* Fixed: Added overflow-auto to enable scrolling for long lines */}
+                  {}
                   <textarea
                     readOnly
                     className="flex-1 w-full h-full p-4 font-mono text-xs md:text-sm leading-relaxed text-emerald-400 bg-transparent resize-none outline-none selection:bg-emerald-900/30 whitespace-pre overflow-auto scrollbar-thin scrollbar-thumb-slate-700"
@@ -897,7 +950,7 @@ function ProjectDetails() {
               </p>
               <button
                 onClick={() => {
-                  setFileError('');
+                  setFileError("");
                   setShowNewFileModal(true);
                 }}
                 className="mt-8 flex items-center gap-2 bg-primary hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-blue-900/20 transition-all active:scale-95"
@@ -909,7 +962,7 @@ function ProjectDetails() {
         )}
       </div>
 
-      {/* New File Modal */}
+      {}
       {showNewFileModal && (
         <div className="fixed inset-0 md:left-72 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-surface rounded-2xl border border-border w-full max-w-md p-6 shadow-2xl relative z-[80]">
@@ -918,7 +971,7 @@ function ProjectDetails() {
               <button
                 onClick={() => {
                   setShowNewFileModal(false);
-                  setFileError('');
+                  setFileError("");
                 }}
                 className="text-slate-500 hover:text-white transition-colors"
               >
@@ -970,7 +1023,7 @@ function ProjectDetails() {
                   type="button"
                   onClick={() => {
                     setShowNewFileModal(false);
-                    setFileError('');
+                    setFileError("");
                   }}
                   className="flex-1 px-4 py-3 border border-border text-slate-400 rounded-xl font-bold hover:bg-white/5 hover:text-white transition-colors"
                 >
@@ -988,7 +1041,7 @@ function ProjectDetails() {
         </div>
       )}
 
-      {/* Edit File Modal */}
+      {}
       {editingFile && (
         <div
           className="fixed inset-0 md:left-72 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4 animate-fade-in"
@@ -1000,7 +1053,7 @@ function ProjectDetails() {
               <button
                 onClick={() => {
                   setEditingFile(null);
-                  setFileError('');
+                  setFileError("");
                 }}
                 className="text-slate-500 hover:text-white transition-colors"
               >
@@ -1032,7 +1085,7 @@ function ProjectDetails() {
                   type="button"
                   onClick={() => {
                     setEditingFile(null);
-                    setFileError('');
+                    setFileError("");
                   }}
                   className="flex-1 px-4 py-3 border border-border text-slate-400 rounded-xl font-bold hover:bg-white/5 hover:text-white transition-colors"
                 >

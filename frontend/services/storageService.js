@@ -1,6 +1,5 @@
 import { STORAGE_KEYS } from "../constants.js";
 
-// Helper to read an array from localStorage
 const get = (key) => {
   try {
     const data = localStorage.getItem(key);
@@ -10,13 +9,10 @@ const get = (key) => {
   }
 };
 
-// Helper to write an array to localStorage
 const set = (key, data) => {
   try {
     localStorage.setItem(key, JSON.stringify(data));
-  } catch (e) {
-    // Handle storage quota exceeded or other storage errors
-  }
+  } catch (e) {}
 };
 
 export const storageService = {
@@ -39,22 +35,26 @@ export const storageService = {
     },
     add: (project) => {
       const projects = get(STORAGE_KEYS.PROJECTS);
-      const isDuplicate = projects.some(p => 
-        p.ownerId === project.ownerId && 
-        p.name.toLowerCase() === project.name.toLowerCase()
+      const isDuplicate = projects.some(
+        (p) =>
+          p.ownerId === project.ownerId &&
+          p.name.toLowerCase() === project.name.toLowerCase()
       );
-      if (isDuplicate) throw new Error('A project with this name already exists');
-      
+      if (isDuplicate)
+        throw new Error("A project with this name already exists");
+
       set(STORAGE_KEYS.PROJECTS, [...projects, project]);
     },
     update: (project) => {
       const projects = get(STORAGE_KEYS.PROJECTS);
-      const isDuplicate = projects.some(p => 
-        p.ownerId === project.ownerId && 
-        p.name.toLowerCase() === project.name.toLowerCase() && 
-        p.id !== project.id
+      const isDuplicate = projects.some(
+        (p) =>
+          p.ownerId === project.ownerId &&
+          p.name.toLowerCase() === project.name.toLowerCase() &&
+          p.id !== project.id
       );
-      if (isDuplicate) throw new Error('A project with this name already exists');
+      if (isDuplicate)
+        throw new Error("A project with this name already exists");
 
       const index = projects.findIndex((p) => p.id === project.id);
       if (index !== -1) {
@@ -91,23 +91,26 @@ export const storageService = {
     add: (file) => {
       const key = `${STORAGE_KEYS.PROJECTS}_files`;
       const files = get(key);
-      const isDuplicate = files.some(f => 
-        f.projectId === file.projectId && 
-        f.name.toLowerCase() === file.name.toLowerCase()
+      const isDuplicate = files.some(
+        (f) =>
+          f.projectId === file.projectId &&
+          f.name.toLowerCase() === file.name.toLowerCase()
       );
-      if (isDuplicate) throw new Error('A file with this name already exists in this project');
+      if (isDuplicate)
+        throw new Error("A file with this name already exists in this project");
 
       set(key, [...files, file]);
     },
     update: (file) => {
       const key = `${STORAGE_KEYS.PROJECTS}_files`;
       const files = get(key);
-      const isDuplicate = files.some(f => 
-        f.projectId === file.projectId && 
-        f.name.toLowerCase() === file.name.toLowerCase() && 
-        f.id !== file.id
+      const isDuplicate = files.some(
+        (f) =>
+          f.projectId === file.projectId &&
+          f.name.toLowerCase() === file.name.toLowerCase() &&
+          f.id !== file.id
       );
-      if (isDuplicate) throw new Error('A file with this name already exists');
+      if (isDuplicate) throw new Error("A file with this name already exists");
 
       const index = files.findIndex((f) => f.id === file.id);
       if (index !== -1) {

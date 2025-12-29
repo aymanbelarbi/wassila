@@ -24,9 +24,8 @@ function Projects() {
   const [name, setName] = useState("");
   const [projects, setProjects] = useState([]);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
-  // Edit State
   const [editingProject, setEditingProject] = useState(null);
   const [editName, setEditName] = useState("");
 
@@ -49,7 +48,7 @@ function Projects() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!user) return;
-    setError('');
+    setError("");
     setLoading(true);
 
     try {
@@ -68,17 +67,16 @@ function Projects() {
         setName("");
         setLoading(false);
         setShowSuccess(false);
-        // Automatically open the new project
+
         navigate(`/projects/${newProject.id}`);
       }, 1000);
     } catch (e) {
-      setError(e.message || 'Failed to create project');
+      setError(e.message || "Failed to create project");
       setLoading(false);
     }
   };
 
   const handleDelete = (e, id) => {
-    // Critical: Stop propagation to prevent navigation to project details
     e.preventDefault();
     e.stopPropagation();
 
@@ -88,7 +86,7 @@ function Projects() {
       )
     ) {
       storageService.projects.delete(id);
-      // Update state immediately without reload
+
       setProjects(projects.filter((p) => p.id !== id));
     }
   };
@@ -102,7 +100,7 @@ function Projects() {
 
   const handleUpdateProject = (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
     if (editingProject && editName.trim()) {
       try {
         const updatedProject = { ...editingProject, name: editName.trim() };
@@ -110,7 +108,7 @@ function Projects() {
         setEditingProject(null);
         loadProjects();
       } catch (e) {
-        setError(e.message || 'Failed to update project');
+        setError(e.message || "Failed to update project");
       }
     }
   };
@@ -131,7 +129,7 @@ function Projects() {
       </div>
 
       <div className="flex flex-col gap-8">
-        {/* CREATE FORM SECTION - TOP */}
+        {}
         <div className="w-full">
           <div className="bg-surface p-6 rounded-2xl border border-border shadow-lg relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
@@ -206,7 +204,7 @@ function Projects() {
           </div>
         </div>
 
-        {/* PROJECTS LIST SECTION - BOTTOM */}
+        {}
         <div className="w-full">
           <div className="flex items-center gap-2 mb-6 text-slate-400 px-1 border-b border-border pb-2">
             <LayoutGrid size={18} />
@@ -249,13 +247,13 @@ function Projects() {
                         <Folder size={24} />
                       </div>
                       <div className="flex items-center gap-2">
-                          <button
-                            onClick={(e) => startEdit(e, project)}
-                            className="p-2 rounded-lg transition-all opacity-0 group-hover:opacity-100 z-40 bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500 hover:text-white"
-                            title="Edit Name"
-                          >
-                            <Edit2 size={16} />
-                          </button>
+                        <button
+                          onClick={(e) => startEdit(e, project)}
+                          className="p-2 rounded-lg transition-all opacity-0 group-hover:opacity-100 z-40 bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500 hover:text-white"
+                          title="Edit Name"
+                        >
+                          <Edit2 size={16} />
+                        </button>
                         <button
                           onClick={(e) => handleDelete(e, project.id)}
                           className="p-2 rounded-lg transition-all opacity-0 group-hover:opacity-100 z-40 bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white"
@@ -318,7 +316,7 @@ function Projects() {
         </div>
       </div>
 
-      {/* Edit Modal */}
+      {}
       {editingProject && (
         <div
           className="fixed inset-0 md:left-72 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4 animate-fade-in"
@@ -330,7 +328,7 @@ function Projects() {
               <button
                 onClick={() => {
                   setEditingProject(null);
-                  setError('');
+                  setError("");
                 }}
                 className="text-slate-500 hover:text-white transition-colors"
               >
@@ -362,7 +360,7 @@ function Projects() {
                   type="button"
                   onClick={() => {
                     setEditingProject(null);
-                    setError('');
+                    setError("");
                   }}
                   className="flex-1 px-4 py-3 border border-border text-slate-400 rounded-xl font-bold hover:bg-white/5 hover:text-white transition-colors"
                 >
