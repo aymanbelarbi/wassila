@@ -35,7 +35,12 @@ export class AnalyzerService {
           column: 120,
           severity: "LOW",
           category: "STYLE",
-          suggestion: `Lines should be no longer than 120 characters for readability.\n\nCurrent length: ${line.text.length} characters\n\nBreak into multiple lines.`,
+          suggestion: `Lines should be no longer than 120 characters to maintain readability and avoid horizontal scrolling.
+---CODE---
+// Break long lines into multiple lines
+const longString = "part1" + 
+  "part2" + 
+  "part3";`,
           problematicCode: line.text.trim(),
         });
       }
@@ -52,9 +57,9 @@ export class AnalyzerService {
             column: line.text.indexOf("console.log"),
             severity: "LOW",
             category: "STYLE",
-            suggestion: `console.log should not be used in production code.
-
-Replace with:
+            suggestion: `console.log should not be used in production. It can leak sensitive info and clutter logs.
+---CODE---
+// Use a dedicated logger
 const logger = { info: (msg) => {}, error: (msg) => {} };
 logger.info("your message");`,
             problematicCode: line.text.trim(),
@@ -69,10 +74,12 @@ logger.info("your message");`,
             column: line.text.indexOf("var"),
             severity: "MEDIUM",
             category: "STYLE",
-            suggestion: `'var' is function-scoped and can lead to bugs. 'const' and 'let' are block-scoped and preferred in modern JS.
+            suggestion: `'var' is function-scoped and can lead to hoisting bugs. 'const' and 'let' are block-scoped and safer.
+---CODE---
+// Use const for values that don't change
+const myValue = 42;
 
-Replace 'var' with 'const' (if value doesn't change) or 'let' (if it does):
-const myValue = 42;  // or
+// Use let for values that change
 let counter = 0;`,
             problematicCode: line.text.trim(),
           });
@@ -86,7 +93,11 @@ let counter = 0;`,
             column: 0,
             severity: "INFO",
             category: "STYLE",
-            suggestion: `JavaScript usually prefers camelCase or PascalCase for variables and functions.`,
+            suggestion: `JavaScript standard implies camelCase for variables and functions.
+---CODE---
+// Use camelCase
+const userName = "John"; // instead of user_name
+function getUserData() {} // instead of get_user_data`,
             problematicCode: line.text.trim(),
           });
         }
@@ -103,11 +114,12 @@ let counter = 0;`,
             column: line.text.indexOf("print"),
             severity: "LOW",
             category: "STYLE",
-            suggestion: `In production, use a logging module (e.g., 'import logging') instead of print().
-
-Replace print() with:
+            suggestion: `In production, use a standardized logging module instead of raw print statements.
+---CODE---
 import logging
 logger = logging.getLogger(__name__)
+
+# Replace print("msg") with:
 logger.info("your message")`,
             problematicCode: line.text.trim(),
           });
@@ -122,10 +134,11 @@ logger.info("your message")`,
               column: 0,
               severity: "INFO",
               category: "STYLE",
-              suggestion: `Python variables should use snake_case (e.g., 'user_name').
-
-Replace PascalCase/camelCase with snake_case:
-user_name = "John"  # Instead of: userName or UserName`,
+              suggestion: `Python variables should use snake_case for better readability and PEP-8 compliance.
+---CODE---
+# Use snake_case
+user_name = "John"  
+# Avoid: userName or UserName`,
               problematicCode: line.text.trim(),
             });
           }
@@ -138,10 +151,12 @@ user_name = "John"  # Instead of: userName or UserName`,
             column: 0,
             severity: "INFO",
             category: "STYLE",
-            suggestion: `Python functions should use snake_case (e.g., 'process_data').
-
-Replace PascalCase/camelCase with snake_case:
-def process_data():  # Instead of: def processData() or ProcessData()`,
+            suggestion: `Python functions should use snake_case.
+---CODE---
+# Use snake_case for functions
+def process_data():
+    pass
+# Avoid: def processData()`,
             problematicCode: line.text.trim(),
           });
         }
@@ -158,7 +173,13 @@ def process_data():  # Instead of: def processData() or ProcessData()`,
             column: 0,
             severity: "LOW",
             category: "STYLE",
-            suggestion: `In modern PHP frameworks, data should be returned via a response or template engine.`,
+            suggestion: `In modern PHP architectures (MVC), data should be returned purely, not echoed directly.
+---CODE---
+// Return data instead of printing
+return response()->json(['data' => $value]);
+
+// Or in a template
+<?= $value ?>`,
             problematicCode: line.text.trim(),
           });
         }
@@ -171,7 +192,11 @@ def process_data():  # Instead of: def processData() or ProcessData()`,
               column: 0,
               severity: "MEDIUM",
               category: "STYLE",
-              suggestion: `Always use the full '<?php' tag for better compatibility.`,
+              suggestion: `Short tags (<?) are not supported on all servers. Use the full tag.
+---CODE---
+<?php
+// Your code here
+?>`,
               problematicCode: line.text.trim(),
             });
           }
@@ -194,14 +219,16 @@ def process_data():  # Instead of: def processData() or ProcessData()`,
           column: line.text.indexOf("eval"),
           severity: "CRITICAL",
           category: "SECURITY",
-          suggestion: `eval() allows arbitrary code execution and is a critical security vulnerability.
-
-Remove eval() entirely. For JSON parsing, use:
+          suggestion: `eval() allows arbitrary code execution and is a major security vector.
+---CODE---
+// For JSON parsing:
 const data = JSON.parse(jsonString);
 
-For dynamic function calls, use a function map:
-const actions = { add: () => {}, sub: () => {} };
-actions[operation]();`,
+// For dynamic operations, use a map:
+const actions = { 
+  add: (a, b) => a + b 
+};
+const result = actions[operation](x, y);`,
           problematicCode: line.text.trim(),
         });
       }
@@ -218,10 +245,12 @@ actions[operation]();`,
             column: line.text.indexOf("=="),
             severity: "LOW",
             category: "BUG",
-            suggestion: `Strict equality (===) is safer and avoids unexpected type coercion issues.
-
-Replace '==' with '===':
-if (value === 0) { ... }  // Instead of: if (value == 0)`,
+            suggestion: `Loose equality (==) performs type coercion which can verify true for unexpected values.
+---CODE---
+// Use strict equality
+if (value === 0) {
+  // ...
+}`,
             problematicCode: line.text.trim(),
           });
         }
@@ -238,7 +267,15 @@ if (value === 0) { ... }  // Instead of: if (value == 0)`,
             column: line.text.indexOf("innerHTML"),
             severity: "HIGH",
             category: "SECURITY",
-            suggestion: `Using innerHTML can expose your application to Cross-Site Scripting (XSS). Use textContent or DOM elements instead.`,
+            suggestion: `innerHTML allows injection of malicious scripts (XSS).
+---CODE---
+// Use textContent for text
+element.textContent = "Safe Text";
+
+// Or safely create elements
+const div = document.createElement('div');
+div.textContent = "Content";
+parent.appendChild(div);`,
             problematicCode: line.text.trim(),
           });
         }
@@ -255,7 +292,12 @@ if (value === 0) { ... }  // Instead of: if (value == 0)`,
             column: 0,
             severity: "HIGH",
             category: "SECURITY",
-            suggestion: `Direct queries are prone to SQL injection. Use PDO with prepared statements instead.`,
+            suggestion: `Direct SQL queries with concatenated strings are the #1 cause of SQL Injection.
+---CODE---
+// Use PDO with prepared statements
+$stmt = $pdo->prepare('SELECT * FROM users WHERE id = :id');
+$stmt->execute(['id' => $id]);
+$user = $stmt->fetch();`,
             problematicCode: line.text.trim(),
           });
         }
@@ -274,11 +316,13 @@ if (value === 0) { ... }  // Instead of: if (value == 0)`,
           column: 0,
           severity: "HIGH",
           category: "SECURITY",
-          suggestion: `Never hardcode secrets. Use environment variables.
+          suggestion: `Hardcoding secrets pushes them to version control where they can be stolen.
+---CODE---
+// Use environment variables
+const apiKey = process.env.API_KEY; 
 
-Replace hardcoded values with:
-const apiKey = process.env.API_KEY;  // Node.js
-const apiKey = import.meta.env.VITE_API_KEY;  // Vite`,
+// Or in Vite
+const apiKey = import.meta.env.VITE_API_KEY;`,
           problematicCode: line.text.trim(),
         });
       }
@@ -301,7 +345,15 @@ const apiKey = import.meta.env.VITE_API_KEY;  // Vite`,
           column: indentation,
           severity: "MEDIUM",
           category: "COMPLEXITY",
-          suggestion: `Logic is too deeply nested. Refactor into smaller functions.`,
+          suggestion: `Code is too nested (arrow code), making it hard to read and test.
+---CODE---
+// Extract logic into a separate function
+function handleItem(item) {
+   // Logic here
+}
+
+// Then use it
+items.forEach(handleItem);`,
           problematicCode: line.text.trim(),
         });
       }
@@ -322,7 +374,9 @@ const apiKey = import.meta.env.VITE_API_KEY;  // Vite`,
           line: line.number,
           severity: "LOW",
           category: "DEBT",
-          suggestion: `Resolve technical debt or track it in your task management system.`,
+          suggestion: `TODOs often get forgotten. It is better to track them in a ticket system.
+---CODE---
+// Resolve the task now or move to Jira/Linear.`,
           problematicCode: line.text.trim(),
         });
       }
@@ -339,7 +393,14 @@ const apiKey = import.meta.env.VITE_API_KEY;  // Vite`,
               line: line.number,
               severity: "HIGH",
               category: "BUG",
-              suggestion: `The condition "${currentCondition}" is identical to the previous check. Combine or remove it.`,
+              suggestion: `The condition checks for the same thing twice.
+---CODE---
+// Remove the duplicate else if block
+if (x === 1) {
+  // ...
+} else {
+  // Handle other cases
+}`,
               problematicCode: line.text.trim(),
             });
           }
@@ -364,7 +425,14 @@ const apiKey = import.meta.env.VITE_API_KEY;  // Vite`,
           column: line.text.indexOf("catch"),
           severity: "MEDIUM",
           category: "BUG_RISK",
-          suggestion: `Errors should be handled or logged.`,
+          suggestion: `Silencing errors makes debugging impossible.
+---CODE---
+try {
+  // ...
+} catch (error) {
+  // At least log the error
+  console.error(error); 
+}`,
           problematicCode: line.text.trim(),
         });
       }
@@ -379,7 +447,10 @@ const apiKey = import.meta.env.VITE_API_KEY;  // Vite`,
           column: line.text.indexOf("debugger"),
           severity: "HIGH",
           category: "BUG_RISK",
-          suggestion: `Remove debugger statements before deployment.`,
+          suggestion: `Debugger statements stop execution and should never be in production.
+---CODE---
+// Remove this line completely
+debugger;`,
           problematicCode: line.text.trim(),
         });
       }
@@ -395,7 +466,10 @@ const apiKey = import.meta.env.VITE_API_KEY;  // Vite`,
                 column: 0,
                 severity: "MEDIUM",
                 category: "BUG_RISK",
-                suggestion: `Use exceptions or proper application exit points instead of die().`,
+                suggestion: `Abruptly stopping the script is bad helper practice.
+---CODE---
+// Throw an exception instead
+throw new \RuntimeException("Error occurred");`,
                 problematicCode: line.text.trim(),
               });
           }
@@ -412,9 +486,9 @@ const apiKey = import.meta.env.VITE_API_KEY;  // Vite`,
                 column: 0,
                 severity: "MEDIUM",
                 category: "BUG_RISK",
-                suggestion: `Catch specific exceptions or use 'except Exception:' to avoid catching system exits.
-
-Replace bare except with:
+                suggestion: `Bare 'except:' catches everything, including SystemExit, making it hard to stop scripts.
+---CODE---
+# Catch Exception instead
 try:
     risky_operation()
 except ValueError as e:

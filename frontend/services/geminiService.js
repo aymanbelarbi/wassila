@@ -94,7 +94,8 @@ class GeminiService {
       OUTPUT REQUIREMENTS:
       1. Provide a brief, professional summary of the architectural improvements.
       2. Provide the FULL fixed source code. 
-      3. If the code is now perfect, include "PR-READY: 100/100 Score Guaranteed" in your summary.
+      3. SUMMARY STYLE: Write a single, cohesive paragraph (3-4 sentences) that summarizes the changes logically. Do not use bullet points. Focus on the high-level impact (Security, Stability, Clean Code).
+      4. DO NOT include "PR-READY", "100/100 Score", or guaranteed promises in the summary. Just the facts.
       
       FAILURE TO ADHERE TO ANY RULE WILL RESULT IN A SCORE BELOW 100 AND IS UNACCEPTABLE.
     `;
@@ -110,7 +111,7 @@ class GeminiService {
             properties: {
               summary: {
                 type: "string",
-                description: "A short paragraph summarizing the review.",
+                description: "A concise, cohesive paragraph summarizing the code improvements. Focus on high-level impact like security and readability.",
               },
               fixedCode: {
                 type: "string",
