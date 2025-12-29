@@ -1,3 +1,9 @@
+
+// Helper to print debug info
+const debug = (msg) => {
+    // console.log(`[DEBUG] ${msg}`); 
+};
+
 export const languageDetector = {
   // Heuristic patterns for specific languages
   patterns: {
@@ -23,7 +29,7 @@ export const languageDetector = {
       /JSON\.(parse|stringify)/
     ],
     python: [
-      /def\s+\w+\(.*\):/,
+      /def\s+.*:/,
       /^\s*import\s+\w+(\s+as\s+\w+)?\s*$/,
       /from\s+\w+\s+import/,
       /print\s*\(.*\)/,
@@ -38,11 +44,13 @@ export const languageDetector = {
       /yield\s+/,
       /with\s+\w+\s+as\s+\w+:/,
       /f'[^']*'|f"[^"]*"/,
-      /\[.*for.*in.*\]/ // list comprehension
+      /\[.*for.*in.*\]/, 
+      /^\s*#\s+/m,
+      /^[a-z_][a-z0-9_]*\s*=\s*/i // Simple assignment x = 1 (Case insensitive for constants like API_KEY)
     ],
     php: [
-      /<\?php/i,  // Case-insensitive
-      /<\?(?!\?)/,  // Short tag or <?php
+      /<\?php/i,  
+      /<\?(?!\?)/,  
       /(^|[;\}])\s*\$\w+\s*=/,
       /echo\s+/,
       /->/,
@@ -51,8 +59,8 @@ export const languageDetector = {
       /public\s+function/,
       /private\s+function/,
       /protected\s+function/,
-      /function\s+\w+\s*\([^)]*\$\w+.*\)\s*\{/, // PHP function with $ parameters
-      /function\s+\w+\s*\(\s*\)\s*\{/, // Empty params
+      /function\s+\w+\s*\([^)]*\$\w+.*\)\s*\{/, 
+      /function\s+\w+\s*\(\s*\)\s*\{/, 
       /\$this->/,
       /array\(.*\)/,
       /var_dump|die\(|exit\(/,
@@ -63,16 +71,17 @@ export const languageDetector = {
     ]
   },
 
-  // Check if content looks like the target language
   matchesLanguage: (content, language) => {
     const patterns = languageDetector.patterns[language];
     if (!patterns) return false;
 
-    // To solve the "Simple Code" issue:
-    // We can check if it matches ANY pattern.
     for (let pattern of patterns) {
-      if (content.match(pattern)) return true;
+      if (content.match(pattern)) {
+          // console.log(`[MATCH] ${language} matched pattern: ${pattern}`);
+          return true;
+      }
     }
+    // console.log(`[NO MATCH] ${language} failed all patterns`);
     return false;
   },
 
@@ -85,7 +94,11 @@ export const languageDetector = {
     const symbolDensity = symbolCount / content.length;
 
     if (content.length > 20 && symbolDensity < 0.02) {
-       return { isValid: false, message: 'This looks like plain text. Please write code' };
+       // Allow if it matches strong patterns for the target language
+       const strongMatch = languageDetector.matchesLanguage(content, expectedLanguage);
+       if (!strongMatch) {
+            return { isValid: false, message: 'This looks like plain text. Please write code' };
+       }
     }
 
     const normalize = (lang) => {
@@ -101,7 +114,6 @@ export const languageDetector = {
     const isMatch = languageDetector.matchesLanguage(content, targetLang);
 
     // CRITICAL: If no strong match for target, check if it's "Simple Code"
-    // Simple code looks like code (density) but has no strong signatures.
     const anyLangMatches = Object.keys(languageDetector.patterns).some(l => 
         l !== 'unknown' && languageDetector.matchesLanguage(content, l)
     );
@@ -112,11 +124,12 @@ export const languageDetector = {
          return { isValid: false, message: `This does not look like ${targetNice} code` };
     }
     
-    // If it doesn't match ANY language, but symbol density is high, we let it pass as the target
-    // IF AND ONLY IF it is short (simple assignment) and NOT markup.
     if (!isMatch && !anyLangMatches) {
         const isMarkup = code => code.trim().startsWith('<') && code.trim().endsWith('>');
-        if (symbolDensity > 0.05 && content.length < 50 && !content.includes('\n') && !isMarkup(content)) {
+        // Relaxing the symbol density check for Python specifically as it uses fewer symbols
+        const minDensity = targetLang === 'python' ? 0.01 : 0.05;
+        
+        if (symbolDensity > minDensity && content.length < 100 && !content.includes('\n') && !isMarkup(content)) {
              return { isValid: true, message: '' }; 
         } else {
              const targetNice = { 'javascript': 'JavaScript', 'python': 'Python', 'php': 'PHP' }[targetLang] || targetLang;
@@ -124,10 +137,10 @@ export const languageDetector = {
         }
     }
 
-    // 3. Contamination Check (More relaxed)
+    // 3. Contamination Check
     const indicators = {
         php: [/<\?php/, /\$\w+/],
-        javascript: [/const\s+/, /let\s+/, /var\s+/, /console\./, /typeof\s+/, /import\s+.*from/, /import\s+['"]/, /(\)|[a-zA-Z0-9_])\s*=>/],
+        javascript: [/const\s+/, /let\s+/, /\bvar\s+/, /console\./, /typeof\s+/, /import\s+.*from/, /import\s+['"]/],
         python: [/def\s+.*:/, /import\s+\w+$/, /from\s+.*import/]
     };
 
@@ -136,6 +149,7 @@ export const languageDetector = {
         const strongPatterns = indicators[other] || [];
         for (let p of strongPatterns) {
             if (content.match(p)) {
+                 // console.log(`[CONTAMINATION] Found ${other} pattern in ${targetLang}: ${p}`);
                  if (targetLang === 'javascript' && other === 'php') {
                      if (content.includes('<?php')) {
                          const targetNice = { 'javascript': 'JavaScript', 'python': 'Python', 'php': 'PHP' }[targetLang] || targetLang;
