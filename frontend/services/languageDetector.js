@@ -46,23 +46,24 @@ export const languageDetector = {
     php: [
       /<\?php/i,
       /<\?(?!\?)/,
+      /declare\s*\(\s*strict_types\s*=\s*1\s*\)\s*;/,
       /(^|[;\}])\s*\$\w+\s*=/,
       /echo\s+/,
       /->/,
       /namespace\s+/,
       /^\s*use\s+[\\\w]+;$/m,
-      /public\s+function/,
-      /private\s+function/,
-      /protected\s+function/,
+      /(public|private|protected)\s+(static\s+)?(function|array|string|int|float|bool|object|iterable|callable|void|\?\w+|\\)/,
       /function\s+\w+\s*\([^)]*\$\w+.*\)\s*\{/,
-      /function\s+\w+\s*\(\s*\)\s*\{/,
+      /function\s+\w+\s*\(\s*\)\s*(:\s*\w+)?\s*\{/,
       /\$this->/,
       /array\(.*\)/,
+      /\[\s*['"]\w+['"]\s*=>/,
       /var_dump|die\(|exit\(/,
       /require_once|include_once/,
       /PDO::/,
       /\$pdo->/,
       /::class/,
+      /password_verify|password_hash/,
     ],
   },
 
@@ -112,6 +113,25 @@ export const languageDetector = {
     );
     if (targetLang === "unknown") return { isValid: true, message: "" };
 
+    const strongIndicators = {
+      php: [/<\?php/i, /declare\s*\(\s*strict_types\s*=\s*1\s*\)\s*;/],
+      javascript: [
+        /import\s+.*from/,
+        /export\s+default/,
+        /useEffect|useState/,
+        /className=/,
+      ],
+      python: [/if\s+__name__\s*==\s*['"]__main__['"]:/, /elif\s+/],
+    };
+
+    const hasStrongIndicator = (strongIndicators[targetLang] || []).some((p) =>
+      content.match(p)
+    );
+
+    if (hasStrongIndicator) {
+      return { isValid: true, message: "" };
+    }
+
     const isMatch = languageDetector.matchesLanguage(content, targetLang);
 
     const anyLangMatches = Object.keys(languageDetector.patterns).some(
@@ -155,17 +175,19 @@ export const languageDetector = {
     }
 
     const indicators = {
-      php: [/<\?php/, /\$\w+/],
+      php: [/<\?php/, /\$\w+/, /->/, /::class/],
       javascript: [
-        /const\s+/,
-        /let\s+/,
-        /\bvar\s+/,
+        /(?<!(private|public|protected|static)\s+)const\s+\w+\s*=/,
+        /(?<!(private|public|protected|static)\s+)let\s+\w+\s*=/,
+        /\bvar\s+\w+\s*=/,
         /console\./,
         /typeof\s+/,
         /import\s+.*from/,
         /import\s+['"]/,
+        /export\s+default/,
+        /=>/,
       ],
-      python: [/def\s+.*:/, /import\s+\w+$/, /from\s+.*import/],
+      python: [/def\s+.*:/, /import\s+\w+$/, /from\s+.*import/, /elif\s+/],
     };
 
     const otherLangs = ["javascript", "python", "php"].filter(

@@ -36,7 +36,7 @@ function Login() {
         login(user);
         navigate("/dashboard");
       } else {
-        setError("Invalid email or password.");
+        setError("Invalid email or password");
         setLoading(false);
       }
     }, 800);
@@ -69,7 +69,7 @@ function Login() {
         </div>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-lg mb-6 text-sm text-center">
+          <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-lg mb-6 text-[10px] font-bold uppercase tracking-wider text-center">
             {error}
           </div>
         )}

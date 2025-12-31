@@ -43,6 +43,13 @@ function ProjectCreate() {
     e.preventDefault();
     if (!user) return;
     setError("");
+
+    const nameRegex = /^[a-zA-Z0-9 _-]+$/;
+    if (!nameRegex.test(name)) {
+      setError("Project name can only contain letters, numbers, spaces, underscores, and hyphens");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -105,14 +112,14 @@ function ProjectCreate() {
             </h2>
 
             {showSuccess && (
-              <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 rounded-lg text-sm flex items-center gap-2 animate-fade-in">
+              <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 animate-fade-in">
                 <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
                 Project created successfully!
               </div>
             )}
 
             {error && (
-              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-lg text-sm flex items-center gap-2 animate-fade-in">
+              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 animate-fade-in">
                 <div className="w-2 h-2 rounded-full bg-red-500"></div>
                 {error}
               </div>

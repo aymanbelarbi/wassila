@@ -377,7 +377,7 @@ function Dashboard() {
                   return (
                     <Link
                       key={scan.id}
-                      to={`/projects/${scan.projectId}`}
+                      to={`/projects/${scan.projectId}?fileId=${scan.fileId}&scanId=${scan.id}`}
                       className="group flex items-center justify-between p-4 hover:bg-white/[0.03] rounded-xl transition-all border border-transparent hover:border-white/5"
                     >
                       <div className="flex items-center gap-4 min-w-0">

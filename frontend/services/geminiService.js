@@ -96,6 +96,7 @@ class GeminiService {
       2. Provide the FULL fixed source code. 
       3. SUMMARY STYLE: Write a single, cohesive paragraph (3-4 sentences) that summarizes the changes logically. Do not use bullet points. Focus on the high-level impact (Security, Stability, Clean Code).
       4. DO NOT include "PR-READY", "100/100 Score", or guaranteed promises in the summary. Just the facts.
+      5. FORMATTING: Use standard indentation and ACTUAL NEWLINE CHARACTERS (\n) in the fixedCode string. Each line of code MUST be on a new line. DO NOT minify the code or replace newlines with multiple spaces.
       
       FAILURE TO ADHERE TO ANY RULE WILL RESULT IN A SCORE BELOW 100 AND IS UNACCEPTABLE.
     `;
@@ -116,7 +117,7 @@ class GeminiService {
               },
               fixedCode: {
                 type: "string",
-                description: "The full rewritten source code.",
+                description: "The full rewritten source code. You MUST include standard newline characters (\\n) and proper indentation to ensure the code is readable and functional.",
               },
             },
             required: ["summary", "fixedCode"],

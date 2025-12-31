@@ -45,10 +45,21 @@ function Projects() {
     loadProjects();
   }, [user]);
 
+  const validateName = (name) => {
+    const regex = /^[a-zA-Z0-9 _-]+$/;
+    return regex.test(name);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!user) return;
     setError("");
+
+    if (!validateName(name)) {
+      setError("Project name can only contain letters, numbers, spaces, underscores, and hyphens");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -102,6 +113,10 @@ function Projects() {
     e.preventDefault();
     setError("");
     if (editingProject && editName.trim()) {
+      if (!validateName(editName)) {
+        setError("Project name can only contain letters, numbers, spaces, underscores, and hyphens");
+        return;
+      }
       try {
         const updatedProject = { ...editingProject, name: editName.trim() };
         storageService.projects.update(updatedProject);
@@ -144,14 +159,14 @@ function Projects() {
             </div>
 
             {showSuccess && (
-              <div className="mb-6 p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 rounded-lg text-xs font-semibold flex items-center gap-2 animate-fade-in">
+              <div className="mb-6 p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 animate-fade-in">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
                 Project created successfully!
               </div>
             )}
 
             {error && !editingProject && (
-              <div className="mb-6 p-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-lg text-xs font-semibold flex items-center gap-2 animate-fade-in">
+              <div className="mb-6 p-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 animate-fade-in">
                 <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
                 {error}
               </div>
@@ -337,7 +352,7 @@ function Projects() {
             </div>
 
             {error && editingProject && (
-              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-lg text-xs font-semibold flex items-center gap-2 animate-fade-in">
+              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 animate-fade-in">
                 <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
                 {error}
               </div>

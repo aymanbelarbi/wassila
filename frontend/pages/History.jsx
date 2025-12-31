@@ -116,7 +116,7 @@ function History() {
                     </td>
                     <td className="px-4 md:px-6 py-4">
                       <Link
-                        to={`/projects/${scan.projectId}`}
+                        to={`/projects/${scan.projectId}?fileId=${scan.fileId}&scanId=${scan.id}`}
                         className="text-primary hover:text-blue-400 flex items-center gap-1 text-xs font-bold uppercase tracking-wide transition-colors"
                       >
                         Report <ExternalLink size={12} />

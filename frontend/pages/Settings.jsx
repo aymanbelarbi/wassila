@@ -57,7 +57,7 @@ function Settings() {
     let finalPassword = user.passwordHash;
     if (formData.newPassword) {
       if (formData.currentPassword !== user.passwordHash) {
-        setMessage({ type: "error", text: "Current password is incorrect." });
+        setMessage({ type: "error", text: "Current password is incorrect" });
         return;
       }
       finalPassword = formData.newPassword;
@@ -79,7 +79,7 @@ function Settings() {
       );
 
       login(updatedUser);
-      setMessage({ type: "success", text: "Profile updated successfully." });
+      setMessage({ type: "success", text: "Profile updated successfully" });
 
       setFormData((prev) => ({
         ...prev,
@@ -91,7 +91,7 @@ function Settings() {
 
       setTimeout(() => setMessage(null), 3000);
     } catch (err) {
-      setMessage({ type: "error", text: "Failed to update profile." });
+      setMessage({ type: "error", text: "Failed to update profile" });
     }
   };
 
@@ -124,7 +124,7 @@ function Settings() {
 
       {message && (
         <div
-          className={`p-4 rounded-lg text-sm border ${
+          className={`p-4 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${
             message.type === "success"
               ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
               : "bg-red-500/10 text-red-500 border-red-500/20"

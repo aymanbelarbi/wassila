@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useLocation } from "react-router-dom";
 import { storageService } from "../services/storageService";
 import { analyzerService } from "../services/analyzerService";
 import { geminiService } from "../services/geminiService";
@@ -25,10 +25,13 @@ import {
   LayoutTemplate,
   X,
   Edit2,
+  Clock,
+  History as HistoryIcon,
 } from "lucide-react";
 
 function ProjectDetails() {
   const { id } = useParams();
+  const location = useLocation();
 
   const [project, setProject] = useState(null);
   const [files, setFiles] = useState([]);
@@ -45,6 +48,7 @@ function ProjectDetails() {
   const [unsavedContent, setUnsavedContent] = useState("");
   const [isCopied, setIsCopied] = useState(false);
   const [scanError, setScanError] = useState(null);
+  const [fileScans, setFileScans] = useState([]);
 
   const [editingFile, setEditingFile] = useState(null);
   const [editName, setEditName] = useState("");
@@ -56,29 +60,59 @@ function ProjectDetails() {
   const editorRef = useRef(null);
   const lineNumbersRef = useRef(null);
 
-  const loadData = useCallback(() => {
+  // 1. Initial Load: Project & Files
+  useEffect(() => {
     if (id) {
       const p = storageService.projects.getById(id);
       if (p) {
         setProject(p);
         const projectFiles = storageService.files.getAll(p.id);
         setFiles(projectFiles);
-        if (projectFiles.length > 0 && !selectedFile) {
-          const firstFile = projectFiles[0];
-          setSelectedFile(firstFile);
-          setUnsavedContent(firstFile.content);
-          const latestScan = storageService.scans.getLatestForFile(
-            firstFile.id
-          );
-          setScan(latestScan);
-        }
       }
     }
-  }, [id, selectedFile]);
+  }, [id]);
 
+  // 2. URL Parameter Handling & Initial selection
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (!project || files.length === 0) return;
+
+    const params = new URLSearchParams(location.search);
+    const urlFileId = params.get("fileId");
+    const urlScanId = params.get("scanId");
+
+    let targetFile = null;
+    let targetScan = null;
+
+    if (urlFileId) {
+      targetFile = files.find((f) => f.id === urlFileId);
+      if (targetFile && urlScanId) {
+        const allScans = storageService.scans.getAll(project.id);
+        targetScan = allScans.find((s) => s.id === urlScanId);
+      }
+    }
+
+    // Default to first file if nothing is selected or specified in URL
+    if (!targetFile && !selectedFile && files.length > 0) {
+      targetFile = files[0];
+    }
+
+    if (targetFile && targetFile.id !== selectedFile?.id) {
+      setSelectedFile(targetFile);
+      setUnsavedContent(targetFile.content);
+      
+      const lScan = targetScan || storageService.scans.getLatestForFile(targetFile.id);
+      setScan(lScan);
+      if (targetScan) setActiveTab("issues");
+      
+      const allFileScans = storageService.scans.getAll(project.id).filter(
+        (s) => s.fileId === targetFile.id
+      );
+      setFileScans(allFileScans);
+    } else if (targetScan && targetScan.id !== scan?.id) {
+      setScan(targetScan);
+      setActiveTab("issues");
+    }
+  }, [project, files, location.search]);
 
   const handleScroll = () => {
     if (editorRef.current && lineNumbersRef.current) {
@@ -91,14 +125,32 @@ function ProjectDetails() {
     setUnsavedContent(file.content);
     const latestScan = storageService.scans.getLatestForFile(file.id);
     setScan(latestScan);
+    
+    if (project) {
+      const allFileScans = storageService.scans.getAll(project.id).filter(
+        s => s.fileId === file.id
+      );
+      setFileScans(allFileScans);
+    }
+    
     setActiveTab(latestScan ? "issues" : "editor");
     setIsCopied(false);
+  };
+
+  const validateFileName = (name) => {
+    const regex = /^[a-zA-Z0-9_-]+$/;
+    return regex.test(name);
   };
 
   const handleCreateFile = (e) => {
     e.preventDefault();
     if (!project) return;
     setFileError("");
+
+    if (!validateFileName(newFileForm.name)) {
+      setFileError("File name can only contain letters, numbers, underscores, and hyphens");
+      return;
+    }
 
     const extension =
       newFileForm.language === "javascript"
@@ -130,6 +182,11 @@ function ProjectDetails() {
     }
   };
 
+  const handleViewHistoryScan = (historicalScan) => {
+    setScan(historicalScan);
+    setActiveTab("issues");
+  };
+
   const handleDeleteFile = (e, fileId) => {
     e.preventDefault();
     e.stopPropagation();
@@ -158,6 +215,10 @@ function ProjectDetails() {
     e.preventDefault();
     setFileError("");
     if (editingFile && editName.trim()) {
+      if (!validateFileName(editName)) {
+        setFileError("File name can only contain letters, numbers, underscores, and hyphens");
+        return;
+      }
       try {
         const extension =
           editingFile.language === "javascript"
@@ -300,6 +361,11 @@ function ProjectDetails() {
         lastScanDate: newScan.timestamp,
       });
       setScan(newScan);
+      
+      const allFileScans = storageService.scans.getAll(project.id).filter(
+        s => s.fileId === selectedFile.id
+      );
+      setFileScans(allFileScans);
     } catch (e) {
       const errorMessage =
         e.userMessage ||
@@ -542,6 +608,17 @@ function ProjectDetails() {
                     </span>
                   )}
                 </button>
+                <button
+                  onClick={() => setActiveTab("history")}
+                  disabled={fileScans.length === 0}
+                  className={`px-5 py-3 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all relative ${
+                    activeTab === "history"
+                      ? "text-primary bg-surface border-t-2 border-primary"
+                      : "text-slate-500 hover:text-slate-300 hover:bg-white/5 border-t-2 border-transparent disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                  }`}
+                >
+                  <Clock size={14} /> History
+                </button>
               </div>
               {activeTab === "fixed" && (
                 <button
@@ -609,8 +686,8 @@ function ProjectDetails() {
                             stroke="currentColor"
                             strokeWidth="8"
                             fill="transparent"
-                            strokeDasharray={226}
-                            strokeDashoffset={226 - (226 * scan.score) / 100}
+                            strokeDasharray={227}
+                            strokeDashoffset={227 - (227 * scan.score) / 100}
                             className={`${
                               scan.score >= 80
                                 ? "text-emerald-500"
@@ -907,6 +984,89 @@ function ProjectDetails() {
                         </div>
                       )}
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "history" && (
+                <div className="absolute inset-0 overflow-y-auto p-4 md:p-6 space-y-4 bg-slate-950">
+                  <div className="max-w-4xl mx-auto space-y-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                        <HistoryIcon size={16} className="text-primary" />
+                        Scan History for {selectedFile.name}
+                      </h3>
+                      <span className="text-[10px] text-slate-500 font-bold uppercase">
+                        {fileScans.length} reports found
+                      </span>
+                    </div>
+
+                    {fileScans.length === 0 ? (
+                      <div className="bg-surface border border-border rounded-xl p-12 text-center">
+                        <Clock size={48} className="text-slate-700 mx-auto mb-4 opacity-20" />
+                        <p className="text-slate-400 font-medium">No scan history available for this file</p>
+                        <p className="text-xs text-slate-600 mt-1 uppercase tracking-wider">Run your first scan to see history here</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {fileScans.map((hScan) => (
+                          <div
+                            key={hScan.id}
+                            className={`group bg-surface border border-border p-4 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:border-primary/30 ${
+                              scan?.id === hScan.id ? "ring-1 ring-primary/50 border-primary/50" : ""
+                            }`}
+                          >
+                            <div className="flex items-center gap-4">
+                              <div
+                                className={`w-12 h-12 rounded-xl flex items-center justify-center border font-bold text-sm ${
+                                  hScan.score >= 80
+                                    ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                                    : hScan.score >= 50
+                                    ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                                    : "bg-red-500/10 text-red-500 border-red-500/20"
+                                }`}
+                              >
+                                {hScan.score}
+                              </div>
+                              <div>
+                                <div className="text-white font-bold text-sm flex items-center gap-2">
+                                  {hScan.score === 100 ? "Perfect Report" : "Security Analysis"}
+                                  {scan?.id === hScan.id && (
+                                    <span className="text-[9px] bg-primary/20 text-primary px-1.5 py-0.5 rounded uppercase tracking-tighter">Current</span>
+                                  )}
+                                </div>
+                                <div className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mt-0.5">
+                                  {new Date(hScan.timestamp).toLocaleString(undefined, {
+                                    dateStyle: 'medium',
+                                    timeStyle: 'short'
+                                  })}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-3">
+                              <div className="hidden md:flex flex-col items-end mr-2">
+                                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-tight">Issues Found</span>
+                                <span className="text-xs text-white font-mono">{hScan.issues.length}</span>
+                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleViewHistoryScan(hScan);
+                                }}
+                                className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                                  scan?.id === hScan.id
+                                    ? "bg-primary/20 text-primary border-primary/30 cursor-default"
+                                    : "bg-surface border-border text-slate-400 hover:text-white hover:border-slate-600 active:scale-95"
+                                }`}
+                              >
+                                {scan?.id === hScan.id ? "Viewing" : "View Report"}
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

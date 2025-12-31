@@ -30,6 +30,12 @@ function Register() {
     e.preventDefault();
     setError("");
 
+    const usernameRegex = /^[a-zA-Z0-9_-]+$/;
+    if (!usernameRegex.test(username)) {
+      setError("Username can only contain letters, numbers, underscores, and hyphens");
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
@@ -91,7 +97,7 @@ function Register() {
         </div>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-lg mb-6 text-sm text-center">
+          <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-lg mb-6 text-[10px] font-bold uppercase tracking-wider text-center">
             {error}
           </div>
         )}
