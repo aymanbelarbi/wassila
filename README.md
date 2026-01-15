@@ -1,6 +1,4 @@
-# Wassila Setup Guide
-
-AI-powered code reviewer and analyzer.
+# Wassila | AI-powered code reviewer and analyzer.
 
 ---
 
