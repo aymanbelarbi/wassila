@@ -1,6 +1,4 @@
-# Wassila | AI-powered code reviewer and analyzer.
-
----
+# Wassila | AI-powered code reviewer and analyzer
 
 ## Step 1: Install Requirements
 
