@@ -40,77 +40,91 @@ function Dashboard() {
   const [severityData, setSeverityData] = useState([]);
 
   useEffect(() => {
-    if (user) {
-      const allUserProjects = storageService.projects.getAll(user.id);
-      allUserProjects.sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      setProjects(allUserProjects);
+    const fetchData = async () => {
+      if (user) {
+        try {
+          const allUserProjects = await storageService.projects.getAll();
+          allUserProjects.sort(
+            (a, b) =>
+              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+          setProjects(allUserProjects);
 
-      const allScans = [];
-      allUserProjects.forEach((p) => {
-        const scans = storageService.scans.getAll(p.id);
-        allScans.push(...scans);
-      });
+          // Optimization: Fetch all scans for this user in one go
+          const allScans = await storageService.scans.getAll();
 
-      allScans.sort(
-        (a, b) =>
-          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      );
-      setRecentScans(allScans.slice(0, 10));
-      setTotalScansCount(allScans.length);
+          allScans.sort(
+            (a, b) =>
+              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+          setRecentScans(allScans.slice(0, 10));
+          setTotalScansCount(allScans.length);
 
-      const latestScans = allUserProjects
-        .map((p) => storageService.scans.getLatest(p.id))
-        .filter((s) => s !== null);
+          // Get latest scan for each project to calculate averages and distribution
+          const latestScansMap = {};
+          allScans.forEach(scan => {
+            if (!latestScansMap[scan.project_id]) {
+              latestScansMap[scan.project_id] = scan;
+            }
+          });
+          const latestScans = Object.values(latestScansMap);
 
-      if (latestScans.length > 0) {
-        const avg =
-          latestScans.reduce((acc, s) => acc + s.score, 0) / latestScans.length;
-        setAvgSecurity(Math.round(avg));
+          if (latestScans.length > 0) {
+            const avg =
+              latestScans.reduce((acc, s) => acc + s.score, 0) / latestScans.length;
+            setAvgSecurity(Math.round(avg));
+          } else {
+            setAvgSecurity(0);
+          }
+
+          const chartData = [...allScans]
+            .slice(0, 10)
+            .reverse()
+            .map((s) => ({
+              name: new Date(s.created_at).toLocaleDateString(undefined, {
+                month: "short",
+                day: "numeric",
+              }),
+              score: s.score,
+              project_name:
+                allUserProjects.find((p) => String(p.id) === String(s.project_id))?.name ||
+                "Unknown",
+            }));
+          setTrendData(chartData);
+
+          let critical = 0,
+            high = 0,
+            medium = 0,
+            low = 0;
+          latestScans.forEach((scan) => {
+            if (scan.issues && Array.isArray(scan.issues)) {
+              scan.issues.forEach((issue) => {
+                const sev = issue.severity?.toUpperCase();
+                if (sev === "CRITICAL") critical++;
+                else if (sev === "HIGH") high++;
+                else if (sev === "MEDIUM") medium++;
+                else if (sev === "LOW") low++;
+              });
+            }
+          });
+
+          const distData = [
+            { name: "Critical", value: critical, color: "#ef4444" },
+            { name: "High", value: high, color: "#f97316" },
+            { name: "Medium", value: medium, color: "#eab308" },
+            { name: "Low", value: low, color: "#3b82f6" },
+          ].filter((d) => d.value > 0);
+
+          if (distData.length === 0 && latestScans.length > 0) {
+            distData.push({ name: "Safe", value: 1, color: "#10b981" });
+          }
+          setSeverityData(distData);
+        } catch (error) {
+          console.error("Error fetching dashboard data:", error);
+        }
       }
-
-      const chartData = [...allScans]
-        .slice(0, 10)
-        .reverse()
-        .map((s) => ({
-          name: new Date(s.timestamp).toLocaleDateString(undefined, {
-            month: "short",
-            day: "numeric",
-          }),
-          score: s.score,
-          project:
-            allUserProjects.find((p) => p.id === s.projectId)?.name ||
-            "Unknown",
-        }));
-      setTrendData(chartData);
-
-      let critical = 0,
-        high = 0,
-        medium = 0,
-        low = 0;
-      latestScans.forEach((scan) => {
-        scan.issues.forEach((issue) => {
-          if (issue.severity === "CRITICAL") critical++;
-          else if (issue.severity === "HIGH") high++;
-          else if (issue.severity === "MEDIUM") medium++;
-          else low++;
-        });
-      });
-
-      const distData = [
-        { name: "Critical", value: critical, color: "#ef4444" },
-        { name: "High", value: high, color: "#f97316" },
-        { name: "Medium", value: medium, color: "#eab308" },
-        { name: "Low", value: low, color: "#3b82f6" },
-      ].filter((d) => d.value > 0);
-
-      if (distData.length === 0 && latestScans.length > 0) {
-        distData.push({ name: "Safe", value: 1, color: "#10b981" });
-      }
-      setSeverityData(distData);
-    }
+    };
+    fetchData();
   }, [user]);
 
   const CustomTooltip = ({ active, payload, label }) => {
@@ -121,9 +135,9 @@ function Dashboard() {
           <p className="text-primary text-sm">
             Score: <span className="font-bold">{payload[0].value}</span>
           </p>
-          {payload[0].payload.project && (
+          {payload[0].payload.project_name && (
             <p className="text-slate-400 text-xs mt-1">
-              {payload[0].payload.project}
+              {payload[0].payload.project_name}
             </p>
           )}
         </div>
@@ -134,6 +148,7 @@ function Dashboard() {
 
   return (
     <div className="space-y-8 animate-fade-in pb-12">
+      {}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
           <h1 className="text-3xl font-bold text-white tracking-tight">
@@ -296,7 +311,7 @@ function Dashboard() {
               Active Projects
             </span>
           </div>
-          <div className="h-[300px] w-full flex items-center justify-center">
+          <div className="h-[300px] w-full relative">
             {severityData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -325,16 +340,21 @@ function Dashboard() {
                   />
                   <Legend
                     verticalAlign="bottom"
-                    height={36}
+                    height={48}
                     iconType="circle"
-                    wrapperStyle={{ paddingTop: "20px" }}
+                    formatter={(value) => (
+                      <span className="text-xs font-semibold text-slate-400 mr-4 ml-1">
+                        {value}
+                      </span>
+                    )}
+                    wrapperStyle={{ paddingTop: "30px" }}
                   />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex flex-col items-center justify-center text-slate-500">
+              <div className="flex flex-col items-center justify-center text-slate-500 w-full">
                 <PieIcon size={48} className="mb-2 opacity-20" />
-                <p className="text-sm">No issues detected across projects.</p>
+                <p className="text-sm">No issues detected across your active files.</p>
               </div>
             )}
           </div>
@@ -371,13 +391,11 @@ function Dashboard() {
             ) : (
               <div className="space-y-1">
                 {recentScans.map((scan) => {
-                  const project = storageService.projects.getById(
-                    scan.projectId
-                  );
+                  const project = projects.find(p => String(p.id) === String(scan.project_id));
                   return (
                     <Link
                       key={scan.id}
-                      to={`/projects/${scan.projectId}?fileId=${scan.fileId}&scanId=${scan.id}`}
+                      to={`/projects/${scan.project_id}?fileId=${scan.file_id}&scanId=${scan.id}`}
                       className="group flex items-center justify-between p-4 hover:bg-white/[0.03] rounded-xl transition-all border border-transparent hover:border-white/5"
                     >
                       <div className="flex items-center gap-4 min-w-0">
@@ -398,11 +416,11 @@ function Dashboard() {
                           </p>
                           <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
                             <span>
-                              {new Date(scan.timestamp).toLocaleDateString()}
+                              {new Date(scan.created_at).toLocaleDateString()}
                             </span>
                             <span className="w-1 h-1 bg-slate-700 rounded-full"></span>
                             <span>
-                              {new Date(scan.timestamp).toLocaleTimeString([], {
+                              {new Date(scan.created_at).toLocaleTimeString([], {
                                 hour: "2-digit",
                                 minute: "2-digit",
                               })}
@@ -416,7 +434,7 @@ function Dashboard() {
                             Issues
                           </p>
                           <p className="text-sm font-bold text-white">
-                            {scan.issues.length}
+                            {scan.issues?.length || 0}
                           </p>
                         </div>
                         <ArrowRight

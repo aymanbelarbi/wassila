@@ -37,7 +37,7 @@ class GeminiService {
 
     const prompt = `
       You are a World-Class Senior Software Engineer and Security Architect. 
-      Your mission is to analyze the provided ${language.toUpperCase()} code and rewrite it to be mathematically perfect according to our strict static analyzer.
+      Your mission is to analyze the provided ${(language || "code").toUpperCase()} code and rewrite it to be mathematically perfect according to our strict static analyzer.
       
       ---
       CONTEXT:

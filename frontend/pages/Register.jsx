@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { storageService } from "../services/storageService";
 import {
   ShieldCheck,
   Lock,
@@ -23,10 +22,10 @@ function Register() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { register: registerUser } = useAuth();
   const navigate = useNavigate();
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     setError("");
 
@@ -41,33 +40,21 @@ function Register() {
       return;
     }
 
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters long");
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long");
       return;
     }
 
     setLoading(true);
 
-    setTimeout(() => {
-      const users = storageService.users.getAll();
-      if (users.some((u) => u.email === email)) {
-        setError("Email already registered");
-        setLoading(false);
-        return;
-      }
-
-      const newUser = {
-        id: crypto.randomUUID(),
-        username,
-        email,
-        role: "USER",
-        passwordHash: password,
-      };
-
-      storageService.users.add(newUser);
-      login(newUser);
+    try {
+      await registerUser(username, email, password);
       navigate("/dashboard");
-    }, 800);
+    } catch (err) {
+      setError(err.message || "Registration failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

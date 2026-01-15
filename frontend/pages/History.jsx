@@ -9,28 +9,17 @@ function History() {
   const [history, setHistory] = useState([]);
 
   useEffect(() => {
-    if (user) {
-      const projects = storageService.projects.getAll(user.id);
-      const allScans = [];
-
-      projects.forEach((p) => {
-        const scans = storageService.scans.getAll(p.id);
-        scans.forEach((s) => {
-          let fileName = "Unknown";
-          if (s.fileId) {
-            const file = storageService.files.getById(s.fileId);
-            if (file) fileName = file.name;
-          }
-          allScans.push({ ...s, projectName: p.name, fileName });
-        });
-      });
-
-      allScans.sort(
-        (a, b) =>
-          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      );
-      setHistory(allScans);
-    }
+    const fetchData = async () => {
+      if (user) {
+        try {
+          const allScans = await storageService.scans.getAll();
+          setHistory(allScans);
+        } catch (err) {
+          console.error("Failed to load history", err);
+        }
+      }
+    };
+    fetchData();
   }, [user]);
 
   return (
@@ -83,17 +72,17 @@ function History() {
                     className="hover:bg-slate-800/30 transition-colors"
                   >
                     <td className="px-4 md:px-6 py-4 font-medium text-slate-200">
-                      {scan.projectName}
+                      {scan.project?.name || "Deleted Project"}
                     </td>
                     <td className="px-4 md:px-6 py-4 text-slate-400 font-mono text-xs">
                       <div className="flex items-center gap-1.5">
                         <FileCode size={14} className="text-slate-500" />
-                        {scan.fileName}
+                        {scan.file?.name || "Deleted File"}
                       </div>
                     </td>
                     <td className="px-4 md:px-6 py-4 text-slate-500 flex items-center gap-2">
                       <Clock size={14} />
-                      {new Date(scan.timestamp).toLocaleString()}
+                      {new Date(scan.created_at).toLocaleString()}
                     </td>
                     <td className="px-4 md:px-6 py-4">
                       <span
@@ -116,7 +105,7 @@ function History() {
                     </td>
                     <td className="px-4 md:px-6 py-4">
                       <Link
-                        to={`/projects/${scan.projectId}?fileId=${scan.fileId}&scanId=${scan.id}`}
+                        to={`/projects/${scan.project_id}?fileId=${scan.file_id}&scanId=${scan.id}`}
                         className="text-primary hover:text-blue-400 flex items-center gap-1 text-xs font-bold uppercase tracking-wide transition-colors"
                       >
                         Report <ExternalLink size={12} />

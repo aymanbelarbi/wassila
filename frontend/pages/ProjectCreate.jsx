@@ -22,16 +22,14 @@ function ProjectCreate() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [error, setError] = useState("");
 
-  const loadProjects = () => {
+  const loadProjects = async () => {
     if (user) {
-      const userProjects = storageService.projects.getAll(user.id);
-
-      setProjects(
-        userProjects.sort(
-          (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        )
-      );
+      try {
+        const userProjects = await storageService.projects.getAll();
+        setProjects(userProjects);
+      } catch (err) {
+        console.error("Failed to load projects", err);
+      }
     }
   };
 
@@ -53,30 +51,23 @@ function ProjectCreate() {
     setLoading(true);
 
     try {
-      const newProject = {
-        id: crypto.randomUUID(),
-        ownerId: user.id,
+      await storageService.projects.add({
         name: name.trim(),
         description: "",
-        createdAt: new Date().toISOString(),
-      };
+      });
 
-      storageService.projects.add(newProject);
-
-      setTimeout(() => {
-        setName("");
-        setLoading(false);
-        setShowSuccess(true);
-        loadProjects();
-        setTimeout(() => setShowSuccess(false), 3000);
-      }, 500);
+      setName("");
+      setLoading(false);
+      setShowSuccess(true);
+      loadProjects();
+      setTimeout(() => setShowSuccess(false), 3000);
     } catch (e) {
       setError(e.message || "Failed to create project");
       setLoading(false);
     }
   };
 
-  const handleDelete = (e, id) => {
+  const handleDelete = async (e, id) => {
     e.preventDefault();
     e.stopPropagation();
     if (
@@ -84,8 +75,12 @@ function ProjectCreate() {
         "Are you sure you want to delete this project? All files and scans will be lost."
       )
     ) {
-      storageService.projects.delete(id);
-      loadProjects();
+      try {
+        await storageService.projects.delete(id);
+        loadProjects();
+      } catch (err) {
+        alert("Failed to delete project");
+      }
     }
   };
 
@@ -182,8 +177,7 @@ function ProjectCreate() {
               </div>
             ) : (
               projects.map((project) => {
-                const files = storageService.files.getAll(project.id);
-                const latestScan = storageService.scans.getLatest(project.id);
+                const latestScan = project.scans?.[0];
 
                 return (
                   <Link
@@ -208,7 +202,7 @@ function ProjectCreate() {
                       {project.name}
                     </h3>
                     <p className="text-slate-500 text-xs mb-4">
-                      Created {new Date(project.createdAt).toLocaleDateString()}
+                      Created {new Date(project.created_at).toLocaleDateString()}
                     </p>
 
                     <div className="mt-auto pt-4 border-t border-border flex items-center justify-between text-sm">
@@ -218,7 +212,7 @@ function ProjectCreate() {
                           title="Files"
                         >
                           <FileCode size={14} />
-                          <span>{files.length}</span>
+                          <span>{project.files_count || 0}</span>
                         </div>
                         {latestScan && (
                           <div

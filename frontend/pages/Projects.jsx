@@ -29,15 +29,14 @@ function Projects() {
   const [editingProject, setEditingProject] = useState(null);
   const [editName, setEditName] = useState("");
 
-  const loadProjects = () => {
+  const loadProjects = async () => {
     if (user) {
-      const userProjects = storageService.projects.getAll(user.id);
-      setProjects(
-        userProjects.sort(
-          (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        )
-      );
+      try {
+        const userProjects = await storageService.projects.getAll();
+        setProjects(userProjects);
+      } catch (err) {
+        console.error("Failed to load projects", err);
+      }
     }
   };
 
@@ -46,7 +45,9 @@ function Projects() {
   }, [user]);
 
   const validateName = (name) => {
-    const regex = /^[a-zA-Z0-9 _-]+$/;
+    // Allows letters, numbers, spaces, dots, underscores, hyphens
+    // but REQUIRES at least one letter to prevent purely numeric names
+    const regex = /^(?=.*[a-zA-Z])[a-zA-Z0-9 ._-]+$/;
     return regex.test(name);
   };
 
@@ -56,22 +57,18 @@ function Projects() {
     setError("");
 
     if (!validateName(name)) {
-      setError("Project name can only contain letters, numbers, spaces, underscores, and hyphens");
+      setError("Name must contain at least one letter and can only include letters, numbers, spaces, dots, underscores, and hyphens");
       return;
     }
 
     setLoading(true);
 
     try {
-      const newProject = {
-        id: crypto.randomUUID(),
-        ownerId: user.id,
+      const newProject = await storageService.projects.add({
         name: name.trim(),
         description: "",
-        createdAt: new Date().toISOString(),
-      };
-
-      storageService.projects.add(newProject);
+      });
+      
       setShowSuccess(true);
 
       setTimeout(() => {
@@ -87,7 +84,7 @@ function Projects() {
     }
   };
 
-  const handleDelete = (e, id) => {
+  const handleDelete = async (e, id) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -96,9 +93,12 @@ function Projects() {
         "Are you sure you want to delete this project? All files and scans will be lost."
       )
     ) {
-      storageService.projects.delete(id);
-
-      setProjects(projects.filter((p) => p.id !== id));
+      try {
+        await storageService.projects.delete(id);
+        setProjects(projects.filter((p) => p.id !== id));
+      } catch (err) {
+        alert("Failed to delete project");
+      }
     }
   };
 
@@ -109,17 +109,19 @@ function Projects() {
     setEditName(project.name);
   };
 
-  const handleUpdateProject = (e) => {
+  const handleUpdateProject = async (e) => {
     e.preventDefault();
     setError("");
     if (editingProject && editName.trim()) {
       if (!validateName(editName)) {
-        setError("Project name can only contain letters, numbers, spaces, underscores, and hyphens");
+        setError("Name must contain at least one letter and can only include letters, numbers, spaces, dots, underscores, and hyphens");
         return;
       }
       try {
-        const updatedProject = { ...editingProject, name: editName.trim() };
-        storageService.projects.update(updatedProject);
+        await storageService.projects.update({ 
+          ...editingProject, 
+          name: editName.trim() 
+        });
         setEditingProject(null);
         loadProjects();
       } catch (e) {
@@ -246,8 +248,7 @@ function Projects() {
               </div>
             ) : (
               projects.map((project) => {
-                const files = storageService.files.getAll(project.id);
-                const latestScan = storageService.scans.getLatest(project.id);
+                const latestScan = project.scans && project.scans.length > 0 ? project.scans[0] : null;
 
                 return (
                   <div
@@ -285,7 +286,7 @@ function Projects() {
                       </h3>
                       <p className="text-slate-500 text-[10px] mb-5 flex items-center gap-1.5 font-mono">
                         <Clock size={12} />{" "}
-                        {new Date(project.createdAt).toLocaleDateString()}
+                        {new Date(project.created_at).toLocaleDateString()}
                       </p>
                     </div>
 
@@ -297,7 +298,7 @@ function Projects() {
                         >
                           <FileCode size={14} />
                           <span className="font-mono text-xs font-semibold">
-                            {files.length}
+                            {project.files_count || 0}
                           </span>
                         </div>
                         {latestScan ? (

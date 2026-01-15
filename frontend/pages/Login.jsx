@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { storageService } from "../services/storageService";
 import {
   ShieldCheck,
   Lock,
@@ -21,25 +20,19 @@ function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    setTimeout(() => {
-      const users = storageService.users.getAll();
-      const user = users.find(
-        (u) => u.email === email && u.passwordHash === password
-      );
-
-      if (user) {
-        login(user);
-        navigate("/dashboard");
-      } else {
-        setError("Invalid email or password");
-        setLoading(false);
-      }
-    }, 800);
+    try {
+      await login(email, password);
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err.message || "Invalid email or password");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

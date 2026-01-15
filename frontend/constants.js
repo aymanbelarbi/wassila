@@ -1,9 +1,10 @@
-export const APP_NAME = "Wassila";
+export const API_URL = "http://localhost:8000/api";
 export const STORAGE_KEYS = {
   USERS: "codeguard_users",
   PROJECTS: "codeguard_projects",
   SCANS: "codeguard_scans",
   CURRENT_USER: "codeguard_current_user_session",
+  TOKEN: "codeguard_token",
 };
 
 export const STATIC_RULES = [

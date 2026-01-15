@@ -14,12 +14,36 @@ export class AnalyzerService {
     issues.push(...this.checkComplexity(lang));
     issues.push(...this.checkTechDebt(lang));
 
-    return issues;
+    // Calculate score based on weighted severity
+    const weights = {
+      CRITICAL: 25,
+      HIGH: 15,
+      MEDIUM: 8,
+      LOW: 3,
+      INFO: 0,
+    };
+
+    const totalDeduction = issues.reduce(
+      (acc, issue) => acc + (weights[issue.severity] || 5),
+      0
+    );
+    const score = Math.round(Math.max(0, 100 - totalDeduction));
+
+    return { issues, score };
   }
 
   checkStyle(lang) {
     const issues = [];
     this.lines.forEach((line) => {
+      const trimmed = line.text.trim();
+      // Skip if the entire line is a comment
+      if (trimmed.startsWith("//") || trimmed.startsWith("/*") || trimmed.startsWith("#")) {
+        return;
+      }
+
+      // Strip trailing comments for inner-line analysis
+      const codeOnly = line.text.split("//")[0].split("/*")[0];
+
       const maxLen = lang === "typescript" || lang === "javascript" ? 160 : 120;
       if (line.text.length > maxLen) {
         issues.push({
@@ -36,15 +60,12 @@ export class AnalyzerService {
 const longString = "part1" + 
   "part2" + 
   "part3";`,
-          problematicCode: line.text.trim(),
+          problematicCode: trimmed,
         });
       }
 
       if (lang === "javascript" || lang === "typescript") {
-        const isCommented =
-          line.text.trim().startsWith("//") ||
-          line.text.trim().startsWith("/*");
-        if (!isCommented && line.text.includes("console.log")) {
+        if (codeOnly.includes("console.log")) {
           issues.push({
             id: crypto.randomUUID(),
             ruleId: "no-console",
@@ -58,10 +79,10 @@ const longString = "part1" +
 // Use a dedicated logger
 const logger = { info: (msg) => {}, error: (msg) => {} };
 logger.info("your message");`,
-            problematicCode: line.text.trim(),
+            problematicCode: trimmed,
           });
         }
-        if (line.text.match(/\bvar\s+\w+/)) {
+        if (codeOnly.match(/\bvar\s+\w+/)) {
           issues.push({
             id: crypto.randomUUID(),
             ruleId: "no-var",
@@ -77,10 +98,10 @@ const myValue = 42;
 
 // Use let for values that change
 let counter = 0;`,
-            problematicCode: line.text.trim(),
+            problematicCode: trimmed,
           });
         }
-        if (line.text.match(/\b[a-z]+_[a-z]+/)) {
+        if (codeOnly.match(/\b[a-z]+_[a-z]+/)) {
           issues.push({
             id: crypto.randomUUID(),
             ruleId: "naming-convention",
@@ -95,13 +116,13 @@ let counter = 0;`,
 // Use camelCase
 const userName = "John"; // instead of user_name
 function getUserData() {} // instead of get_user_data`,
-            problematicCode: line.text.trim(),
+            problematicCode: trimmed,
           });
         }
       }
 
       if (lang === "python") {
-        if (line.text.match(/\bprint\s*\(/)) {
+        if (codeOnly.match(/\bprint\s*\(/)) {
           issues.push({
             id: crypto.randomUUID(),
             ruleId: "no-print",
@@ -117,12 +138,12 @@ logger = logging.getLogger(__name__)
 
 # Replace print("msg") with:
 logger.info("your message")`,
-            problematicCode: line.text.trim(),
+            problematicCode: trimmed,
           });
         }
         if (
-          line.text.match(/\b[A-Z][a-zA-Z0-9]*\s*=[^=]/) ||
-          line.text.match(/\b[a-z]+[A-Z][a-zA-Z0-9]*\s*=[^=]/)
+          codeOnly.match(/\b[A-Z][a-zA-Z0-9]*\s*=[^=]/) ||
+          codeOnly.match(/\b[a-z]+[A-Z][a-zA-Z0-9]*\s*=[^=]/)
         ) {
           issues.push({
             id: crypto.randomUUID(),
@@ -138,12 +159,12 @@ logger.info("your message")`,
 # Use snake_case
 user_name = "John"  
 # Avoid: userName or UserName`,
-            problematicCode: line.text.trim(),
+            problematicCode: trimmed,
           });
         }
         if (
-          line.text.match(/\bdef\s+[A-Z]/) ||
-          line.text.match(/\bdef\s+[a-z]+[A-Z]/)
+          codeOnly.match(/\bdef\s+[A-Z]/) ||
+          codeOnly.match(/\bdef\s+[a-z]+[A-Z]/)
         ) {
           issues.push({
             id: crypto.randomUUID(),
@@ -160,13 +181,13 @@ user_name = "John"
 def process_data():
     pass
 # Avoid: def processData()`,
-            problematicCode: line.text.trim(),
+            problematicCode: trimmed,
           });
         }
       }
 
       if (lang === "php") {
-        if (line.text.match(/\becho\s+/) || line.text.match(/\bprint\s+/)) {
+        if (codeOnly.match(/\becho\s+/) || codeOnly.match(/\bprint\s+/)) {
           issues.push({
             id: crypto.randomUUID(),
             ruleId: "no-echo",
@@ -182,10 +203,10 @@ return response()->json(['data' => $value]);
 
 // Or in a template
 <?= $value ?>`,
-            problematicCode: line.text.trim(),
+            problematicCode: trimmed,
           });
         }
-        if (line.text.includes("<? ") || line.text.includes("<?\n")) {
+        if (codeOnly.includes("<? ") || codeOnly.includes("<?\n")) {
           issues.push({
             id: crypto.randomUUID(),
             ruleId: "no-short-tags",
@@ -199,7 +220,7 @@ return response()->json(['data' => $value]);
 <?php
 // Your code here
 ?>`,
-            problematicCode: line.text.trim(),
+            problematicCode: trimmed,
           });
         }
       }
@@ -210,7 +231,14 @@ return response()->json(['data' => $value]);
   checkSecurity(lang) {
     const issues = [];
     this.lines.forEach((line) => {
-      if (line.text.match(/\beval\s*\(/)) {
+      const trimmed = line.text.trim();
+      // Skip if the entire line is a comment
+      if (trimmed.startsWith("//") || trimmed.startsWith("/*") || trimmed.startsWith("#")) {
+        return;
+      }
+      const codeOnly = line.text.split("//")[0].split("/*")[0];
+
+      if (codeOnly.match(/\beval\s*\(/)) {
         issues.push({
           id: crypto.randomUUID(),
           ruleId: "no-eval",
@@ -229,18 +257,18 @@ const actions = {
   add: (a, b) => a + b 
 };
 const result = actions[operation](x, y);`,
-          problematicCode: line.text.trim(),
+          problematicCode: trimmed,
         });
       }
 
       if (
         (lang === "javascript" || lang === "typescript") &&
-        !line.text.includes("null")
+        !codeOnly.includes("null")
       ) {
         if (
-          line.text.match(/[^=!]={2}[^=]/) ||
-          line.text.match(/^={2}[^=]/) ||
-          line.text.match(/[^=!]={2}$/)
+          codeOnly.match(/[^=!]={2}[^=]/) ||
+          codeOnly.match(/^={2}[^=]/) ||
+          codeOnly.match(/[^=!]={2}$/)
         ) {
           issues.push({
             id: crypto.randomUUID(),
@@ -256,15 +284,15 @@ const result = actions[operation](x, y);`,
 if (value === 0) {
   // ...
 }`,
-            problematicCode: line.text.trim(),
+            problematicCode: trimmed,
           });
         }
       }
 
       if (lang === "javascript" || lang === "typescript") {
         if (
-          line.text.match(/\.innerHTML\s*=/) ||
-          line.text.match(/dangerouslySetInnerHTML/)
+          codeOnly.match(/\.innerHTML\s*=/) ||
+          codeOnly.match(/dangerouslySetInnerHTML/)
         ) {
           issues.push({
             id: crypto.randomUUID(),
@@ -283,13 +311,13 @@ element.textContent = "Safe Text";
 const div = document.createElement('div');
 div.textContent = "Content";
 parent.appendChild(div);`,
-            problematicCode: line.text.trim(),
+            problematicCode: trimmed,
           });
         }
       }
 
       if (lang === "php") {
-        if (line.text.match(/\b(mysql_query|mysqli_query)\s*\(/)) {
+        if (codeOnly.match(/\b(mysql_query|mysqli_query)\s*\(/)) {
           issues.push({
             id: crypto.randomUUID(),
             ruleId: "sql-injection-risk",
@@ -304,7 +332,7 @@ parent.appendChild(div);`,
 $stmt = $pdo->prepare('SELECT * FROM users WHERE id = :id');
 $stmt->execute(['id' => $id]);
 $user = $stmt->fetch();`,
-            problematicCode: line.text.trim(),
+            problematicCode: trimmed,
           });
         }
       }
@@ -314,7 +342,7 @@ $user = $stmt->fetch();`,
       const genericSecretRegex =
         /\b(PASSWORD|SECRET|TOKEN|KEY)\s*=\s*['"][^'"]{6,}['"]/i;
 
-      if (line.text.match(secretRegex) || line.text.match(genericSecretRegex)) {
+      if (codeOnly.match(secretRegex) || codeOnly.match(genericSecretRegex)) {
         issues.push({
           id: crypto.randomUUID(),
           ruleId: "detect-secrets",
@@ -330,7 +358,7 @@ const apiKey = process.env.API_KEY;
 
 // Or in Vite
 const apiKey = import.meta.env.VITE_API_KEY;`,
-          problematicCode: line.text.trim(),
+          problematicCode: trimmed,
         });
       }
     });
@@ -340,6 +368,11 @@ const apiKey = import.meta.env.VITE_API_KEY;`,
   checkComplexity(lang) {
     const issues = [];
     this.lines.forEach((line) => {
+      const trimmed = line.text.trim();
+      if (trimmed.startsWith("//") || trimmed.startsWith("/*") || trimmed.startsWith("#")) {
+        return;
+      }
+      
       const indentation = line.text.search(/\S/);
       const maxIndentation = lang === "python" ? 16 : 20;
       if (indentation > maxIndentation) {
@@ -370,6 +403,17 @@ items.forEach(handleItem);`,
   checkTechDebt(lang) {
     const issues = [];
     this.lines.forEach((line) => {
+      const trimmed = line.text.trim();
+      // Skip if the entire line is a comment or part of a block comment
+      if (
+        trimmed.startsWith("//") || 
+        trimmed.startsWith("/*") || 
+        trimmed.startsWith("*") || 
+        trimmed.startsWith("#")
+      ) {
+        return;
+      }
+      
       if (line.text.includes("TODO") || line.text.includes("FIXME")) {
         issues.push({
           id: crypto.randomUUID(),

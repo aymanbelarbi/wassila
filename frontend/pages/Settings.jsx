@@ -16,7 +16,7 @@ import { storageService } from "../services/storageService";
 import { useNavigate } from "react-router-dom";
 
 function Settings() {
-  const { user, login, logout } = useAuth();
+  const { user, updateProfile, deleteAccount, logout } = useAuth();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -49,36 +49,24 @@ function Settings() {
     hasChanges &&
     (formData.newPassword.length === 0 || formData.currentPassword.length > 0);
 
-  const handleUpdate = (e) => {
+  const handleUpdate = async (e) => {
     e.preventDefault();
     if (!user) return;
     setMessage(null);
 
-    let finalPassword = user.passwordHash;
-    if (formData.newPassword) {
-      if (formData.currentPassword !== user.passwordHash) {
-        setMessage({ type: "error", text: "Current password is incorrect" });
-        return;
-      }
-      finalPassword = formData.newPassword;
-    }
-
     try {
-      const allUsers = storageService.users.getAll();
-      const updatedUser = {
-        ...user,
+      const updateData = {
         username: formData.username,
         email: formData.email,
-        passwordHash: finalPassword,
       };
 
-      const otherUsers = allUsers.filter((u) => u.id !== user.id);
-      localStorage.setItem(
-        "codeguard_users",
-        JSON.stringify([...otherUsers, updatedUser])
-      );
+      if (formData.newPassword) {
+        updateData.current_password = formData.currentPassword;
+        updateData.password = formData.newPassword;
+      }
 
-      login(updatedUser);
+      await updateProfile(updateData);
+      
       setMessage({ type: "success", text: "Profile updated successfully" });
 
       setFormData((prev) => ({
@@ -91,7 +79,17 @@ function Settings() {
 
       setTimeout(() => setMessage(null), 3000);
     } catch (err) {
-      setMessage({ type: "error", text: "Failed to update profile" });
+      let errorText = "Failed to update profile";
+      if (err.errors) {
+        errorText = Object.values(err.errors).flat()[0];
+      } else if (err.message) {
+        errorText = err.message;
+      }
+      
+      setMessage({ 
+        type: "error", 
+        text: errorText 
+      });
     }
   };
 
@@ -102,14 +100,15 @@ function Settings() {
     setShowDeleteModal(true);
   };
 
-  const confirmDeleteAccount = () => {
+  const confirmDeleteAccount = async () => {
     if (deleteConfirmText === "DELETE") {
-      const allUsers = storageService.users
-        .getAll()
-        .filter((u) => u.id !== user?.id);
-      localStorage.setItem("codeguard_users", JSON.stringify(allUsers));
-      logout();
-      navigate("/");
+      try {
+        await deleteAccount();
+        navigate("/");
+      } catch (err) {
+        setMessage({ type: "error", text: "Failed to delete account" });
+        setShowDeleteModal(false);
+      }
     }
   };
 

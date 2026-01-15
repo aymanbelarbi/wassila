@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { useParams, Link, useLocation } from "react-router-dom";
+import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import { storageService } from "../services/storageService";
 import { analyzerService } from "../services/analyzerService";
 import { geminiService } from "../services/geminiService";
@@ -32,6 +32,7 @@ import {
 function ProjectDetails() {
   const { id } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const [project, setProject] = useState(null);
   const [files, setFiles] = useState([]);
@@ -57,61 +58,85 @@ function ProjectDetails() {
   const [isValidCode, setIsValidCode] = useState(true);
   const [fileError, setFileError] = useState("");
 
+  const [isSaving, setIsSaving] = useState(false);
   const editorRef = useRef(null);
   const lineNumbersRef = useRef(null);
 
   // 1. Initial Load: Project & Files
   useEffect(() => {
-    if (id) {
-      const p = storageService.projects.getById(id);
-      if (p) {
-        setProject(p);
-        const projectFiles = storageService.files.getAll(p.id);
-        setFiles(projectFiles);
+    const fetchData = async () => {
+      if (id) {
+        try {
+          const p = await storageService.projects.getById(id);
+          if (p) {
+            setProject(p);
+            const projectFiles = await storageService.files.getAll(p.id);
+            setFiles(projectFiles);
+          }
+        } catch (err) {
+          console.error("Failed to load project details", err);
+        }
       }
-    }
+    };
+    fetchData();
   }, [id]);
 
   // 2. URL Parameter Handling & Initial selection
   useEffect(() => {
-    if (!project || files.length === 0) return;
+    const syncSelection = async () => {
+      if (!project || files.length === 0) return;
 
-    const params = new URLSearchParams(location.search);
-    const urlFileId = params.get("fileId");
-    const urlScanId = params.get("scanId");
+      const params = new URLSearchParams(location.search);
+      const urlFileId = params.get("fileId");
+      const urlScanId = params.get("scanId");
 
-    let targetFile = null;
-    let targetScan = null;
+      let targetFile = null;
+      let targetScan = null;
 
-    if (urlFileId) {
-      targetFile = files.find((f) => f.id === urlFileId);
-      if (targetFile && urlScanId) {
-        const allScans = storageService.scans.getAll(project.id);
-        targetScan = allScans.find((s) => s.id === urlScanId);
+      if (urlFileId) {
+        targetFile = files.find((f) => String(f.id) === String(urlFileId));
+        if (targetFile && urlScanId) {
+          try {
+            const allScans = await storageService.scans.getAll(project.id);
+            targetScan = allScans.find((s) => String(s.id) === String(urlScanId));
+          } catch (err) {
+            console.error("Failed to fetch historical scans", err);
+          }
+        }
       }
-    }
 
-    // Default to first file if nothing is selected or specified in URL
-    if (!targetFile && !selectedFile && files.length > 0) {
-      targetFile = files[0];
-    }
+      // Default to first file if nothing is selected or specified in URL
+      if (!targetFile && !selectedFile && files.length > 0) {
+        targetFile = files[0];
+      }
 
-    if (targetFile && targetFile.id !== selectedFile?.id) {
-      setSelectedFile(targetFile);
-      setUnsavedContent(targetFile.content);
-      
-      const lScan = targetScan || storageService.scans.getLatestForFile(targetFile.id);
-      setScan(lScan);
-      if (targetScan) setActiveTab("issues");
-      
-      const allFileScans = storageService.scans.getAll(project.id).filter(
-        (s) => s.fileId === targetFile.id
-      );
-      setFileScans(allFileScans);
-    } else if (targetScan && targetScan.id !== scan?.id) {
-      setScan(targetScan);
-      setActiveTab("issues");
-    }
+      if (targetFile && targetFile.id !== selectedFile?.id) {
+        setSelectedFile(targetFile);
+        setUnsavedContent(targetFile.content || "");
+        
+        try {
+          const lScan = targetScan || await storageService.scans.getLatestForFile(targetFile.id);
+          
+          // Normalize AI fields for historical scans
+          if (lScan) {
+            lScan.aiSummary = lScan.ai_summary || lScan.aiSummary;
+            lScan.fixedCode = lScan.fixed_code || lScan.fixedCode;
+          }
+
+          setScan(lScan);
+          if (targetScan) setActiveTab("issues");
+          
+          const allFileScans = await storageService.scans.getAll(null, targetFile.id);
+          setFileScans(allFileScans);
+        } catch (err) {
+          console.error("Failed to fetch scan data", err);
+        }
+      } else if (targetScan && targetScan.id !== scan?.id) {
+        setScan(targetScan);
+        setActiveTab("issues");
+      }
+    };
+    syncSelection();
   }, [project, files, location.search]);
 
   const handleScroll = () => {
@@ -120,35 +145,54 @@ function ProjectDetails() {
     }
   };
 
-  const selectFile = (file) => {
+  const selectFile = async (file) => {
     setSelectedFile(file);
-    setUnsavedContent(file.content);
-    const latestScan = storageService.scans.getLatestForFile(file.id);
-    setScan(latestScan);
+    setUnsavedContent(file.content || "");
     
-    if (project) {
-      const allFileScans = storageService.scans.getAll(project.id).filter(
-        s => s.fileId === file.id
-      );
+    // Update URL to match selected file
+    navigate(`/projects/${id}?fileId=${file.id}`, { replace: true });
+
+    try {
+      const latestScan = await storageService.scans.getLatestForFile(file.id);
+      
+      if (latestScan) {
+        latestScan.aiSummary = latestScan.ai_summary || latestScan.aiSummary;
+        latestScan.fixedCode = latestScan.fixed_code || latestScan.fixedCode;
+      }
+
+      setScan(latestScan);
+      
+      const allFileScans = await storageService.scans.getAll(null, file.id);
       setFileScans(allFileScans);
+      
+      setActiveTab(latestScan ? "issues" : "editor");
+    } catch (err) {
+      console.error("Failed to fetch file scans", err);
     }
-    
-    setActiveTab(latestScan ? "issues" : "editor");
     setIsCopied(false);
   };
 
+  const getFileLanguage = (file) => {
+    if (!file) return "javascript";
+    return file.language || 
+      (file.name.endsWith('.php') ? 'php' : 
+       file.name.endsWith('.py') ? 'python' : 'javascript');
+  };
+
   const validateFileName = (name) => {
-    const regex = /^[a-zA-Z0-9_-]+$/;
+    // Allows letters, numbers, dots, underscores, hyphens
+    // but REQUIRES at least one letter to prevent purely numeric names
+    const regex = /^(?=.*[a-zA-Z])[a-zA-Z0-9._-]+$/;
     return regex.test(name);
   };
 
-  const handleCreateFile = (e) => {
+  const handleCreateFile = async (e) => {
     e.preventDefault();
     if (!project) return;
     setFileError("");
 
     if (!validateFileName(newFileForm.name)) {
-      setFileError("File name can only contain letters, numbers, underscores, and hyphens");
+      setFileError("Name must contain at least one letter and can only include letters, numbers, dots, underscores, and hyphens");
       return;
     }
 
@@ -164,15 +208,11 @@ function ProjectDetails() {
       : `${newFileForm.name}.${extension}`;
 
     try {
-      const newFile = {
-        id: crypto.randomUUID(),
-        projectId: project.id,
+      const newFile = await storageService.files.add(project.id, {
         name: finalName,
-        language: newFileForm.language,
         content: "",
-        createdAt: new Date().toISOString(),
-      };
-      storageService.files.add(newFile);
+        language: newFileForm.language,
+      });
       setFiles([...files, newFile]);
       setShowNewFileModal(false);
       setNewFileForm({ name: "", language: "javascript" });
@@ -183,19 +223,35 @@ function ProjectDetails() {
   };
 
   const handleViewHistoryScan = (historicalScan) => {
+    if (historicalScan) {
+      historicalScan.aiSummary = historicalScan.ai_summary || historicalScan.aiSummary;
+      historicalScan.fixedCode = historicalScan.fixed_code || historicalScan.fixedCode;
+    }
     setScan(historicalScan);
     setActiveTab("issues");
   };
 
-  const handleDeleteFile = (e, fileId) => {
+  const handleDeleteFile = async (e, fileId) => {
     e.preventDefault();
     e.stopPropagation();
     if (window.confirm("Are you sure you want to delete this file?")) {
-      storageService.files.delete(fileId);
-      setFiles((prev) => prev.filter((f) => f.id !== fileId));
-      if (selectedFile?.id === fileId) {
-        setSelectedFile(null);
-        setScan(null);
+      try {
+        await storageService.files.delete(fileId);
+        setFiles((prev) => prev.filter((f) => String(f.id) !== String(fileId)));
+        
+        if (selectedFile && String(selectedFile.id) === String(fileId)) {
+          setSelectedFile(null);
+          setScan(null);
+          setFileScans([]);
+          setUnsavedContent("");
+          setScanError(null);
+          setValidationMsg("");
+          
+          // Clear URL parameters
+          navigate(`/projects/${id}`, { replace: true });
+        }
+      } catch (err) {
+        alert("Failed to delete file");
       }
     }
   };
@@ -211,19 +267,20 @@ function ProjectDetails() {
     setEditName(nameWithoutExt);
   };
 
-  const handleUpdateFile = (e) => {
+  const handleUpdateFile = async (e) => {
     e.preventDefault();
     setFileError("");
     if (editingFile && editName.trim()) {
       if (!validateFileName(editName)) {
-        setFileError("File name can only contain letters, numbers, underscores, and hyphens");
+        setFileError("Name must contain at least one letter and can only include letters, numbers, dots, underscores, and hyphens");
         return;
       }
       try {
+        const lang = editingFile.language || "javascript";
         const extension =
-          editingFile.language === "javascript"
+          lang === "javascript"
             ? "js"
-            : editingFile.language === "php"
+            : lang === "php"
             ? "php"
             : "py";
 
@@ -234,11 +291,13 @@ function ProjectDetails() {
         }
         finalName = `${finalName}.${extension}`;
 
-        const updatedFile = { ...editingFile, name: finalName };
-        storageService.files.update(updatedFile);
+        const updatedFile = await storageService.files.update({ 
+          ...editingFile, 
+          name: finalName 
+        });
 
-        setFiles(files.map((f) => (f.id === updatedFile.id ? updatedFile : f)));
-        if (selectedFile?.id === updatedFile.id) {
+        setFiles((prev) => prev.map((f) => (String(f.id) === String(updatedFile.id) ? updatedFile : f)));
+        if (selectedFile && String(selectedFile.id) === String(updatedFile.id)) {
           setSelectedFile(updatedFile);
         }
 
@@ -249,11 +308,29 @@ function ProjectDetails() {
     }
   };
 
-  const handleSaveContent = () => {
-    if (selectedFile) {
-      const updatedFile = { ...selectedFile, content: unsavedContent };
-      storageService.files.update(updatedFile);
-      setSelectedFile(updatedFile);
+  const handleSaveContent = async () => {
+    if (selectedFile && !isSaving) {
+      setIsSaving(true);
+      try {
+        const updatedFile = await storageService.files.update({ 
+          ...selectedFile, 
+          content: unsavedContent,
+          language: getFileLanguage(selectedFile)
+        });
+        
+        // Update the files list so navigation picks up the new content
+        setFiles((prevFiles) =>
+          prevFiles.map((f) => (f.id === updatedFile.id ? updatedFile : f))
+        );
+        
+        // Update current selected file
+        setSelectedFile(updatedFile);
+        setUnsavedContent(updatedFile.content || "");
+      } catch (err) {
+        console.error("Failed to save file content", err);
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 
@@ -268,9 +345,11 @@ function ProjectDetails() {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!selectedFile) return;
+      const lang = getFileLanguage(selectedFile);
+         
       const result = languageDetector.validate(
         unsavedContent,
-        selectedFile.language
+        lang
       );
       setIsValidCode(result.isValid);
       setValidationMsg(result.message);
@@ -300,92 +379,98 @@ function ProjectDetails() {
 
   const handleRunScan = async () => {
     if (!project || !selectedFile) return;
-    handleSaveContent();
+    
+    // 1. Start timer and UI state immediately
+    const scanStartTime = Date.now();
     setIsScanning(true);
     setScanError(null);
+    setScan(null);
     setActiveTab("issues");
 
     try {
-      if (
-        scan &&
-        scan.fixedCode &&
-        scan.fixedCode.trim() === unsavedContent.trim()
-      ) {
-        await new Promise((resolve) => setTimeout(resolve, 3000));
+      // 2. Perform save and local analysis
+      await handleSaveContent();
+      
+      const lang = getFileLanguage(selectedFile);
 
-        const newScan = {
-          id: crypto.randomUUID(),
-          projectId: project.id,
-          fileId: selectedFile.id,
-          timestamp: new Date().toISOString(),
-          issues: [],
-          score: 100,
-          aiSummary:
-            "Smart Rescan Verified: The code matches the previously verified fix. Perfect score confirmed.",
-          fixedCode: unsavedContent,
+      const { issues, score } = analyzerService.analyze(
+        unsavedContent,
+        lang
+      );
+
+      // 3. Determine if AI is needed
+      let aiResult = { summary: "", fixedCode: "" };
+      
+      if (score < 100) {
+        // Slow path: Call Gemini
+        aiResult = await geminiService.reviewCode(
+          unsavedContent,
+          issues,
+          lang
+        );
+      } else {
+        // Fast path: Perfect score
+        aiResult = {
+          summary: "Perfect! Your code meets all security and style standards. No issues were found during this analysis.",
+          fixedCode: unsavedContent
         };
-
-        storageService.scans.add(newScan);
-        storageService.projects.update({
-          ...project,
-          lastScanDate: newScan.timestamp,
-        });
-        setScan(newScan);
-        setIsScanning(false);
-        return;
       }
 
-      const issues = analyzerService.analyze(
-        unsavedContent,
-        selectedFile.language
-      );
-      const score = Math.max(0, 100 - issues.length * 5);
-      const aiResult = await geminiService.reviewCode(
-        unsavedContent,
-        issues,
-        selectedFile.language
-      );
-      const newScan = {
-        id: crypto.randomUUID(),
-        projectId: project.id,
-        fileId: selectedFile.id,
-        timestamp: new Date().toISOString(),
+      // 4. Constant 3-second wait UX (including save/ai time)
+      const elapsed = Date.now() - scanStartTime;
+      const minDelay = 3000;
+      if (elapsed < minDelay) {
+        await new Promise(resolve => setTimeout(resolve, minDelay - elapsed));
+      }
+
+      // 5. Persist the scan
+      const newScan = await storageService.scans.add({
+        project_id: parseInt(project.id),
+        file_id: parseInt(selectedFile.id),
         issues: issues,
-        score: score,
-        aiSummary: aiResult.summary,
-        fixedCode: aiResult.fixedCode,
-      };
-      storageService.scans.add(newScan);
-      storageService.projects.update({
-        ...project,
-        lastScanDate: newScan.timestamp,
+        score: Math.round(score),
+        ai_summary: aiResult.summary,
+        fixed_code: aiResult.fixedCode,
       });
-      setScan(newScan);
       
-      const allFileScans = storageService.scans.getAll(project.id).filter(
-        s => s.fileId === selectedFile.id
-      );
-      setFileScans(allFileScans);
-    } catch (e) {
-      const errorMessage =
-        e.userMessage ||
-        "Failed to analyze code. Please check your Gemini API key in .env.local";
-      setScanError(errorMessage);
+      const augmentedScan = {
+        ...newScan,
+        aiSummary: newScan.ai_summary || aiResult.summary,
+        fixedCode: newScan.fixed_code || aiResult.fixedCode,
+      };
+
+      setScan(augmentedScan);
+      
+      try {
+        const allFileScans = await storageService.scans.getAll(null, selectedFile.id);
+        setFileScans(allFileScans);
+      } catch (err) {
+        console.error("Failed to refresh file scans", err);
+      }
+    } catch (err) {
+      console.error("Scan failed", err);
+      let errorMsg = "Scanning failed. Please try again.";
+      if (err.message && err.errors) {
+        const details = Object.entries(err.errors)
+          .map(([field, msgs]) => `${field}: ${msgs.join(", ")}`)
+          .join(" | ");
+        errorMsg = `Validation Error: ${details}`;
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      setScanError(errorMsg);
       setActiveTab("editor");
     } finally {
       setIsScanning(false);
     }
   };
 
-  const lineCount = unsavedContent.split("\n").length;
+  const lineCount = (unsavedContent || "").split("\n").length;
   const lineNumbers = Array.from({ length: lineCount }, (_, i) => i + 1).join(
     "\n"
   );
 
-  if (!project)
-    return (
-      <div className="p-8 text-center text-slate-500">Loading project...</div>
-    );
+  if (!project) return null; // Silent return instead of "Loading project..." for better UX
 
   return (
     <div className="h-[calc(100vh-100px)] flex flex-col md:flex-row gap-4 animate-fade-in overflow-hidden relative pb-4">
@@ -520,7 +605,7 @@ function ProjectDetails() {
                   </span>
                 )}
 
-                {selectedFile.content !== unsavedContent && isValidCode && (
+                {(selectedFile.content || "") !== unsavedContent && isValidCode && (
                   <span className="text-[10px] bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
                     Unsaved
@@ -532,15 +617,22 @@ function ProjectDetails() {
                 <button
                   onClick={handleSaveContent}
                   disabled={
-                    selectedFile.content === unsavedContent || !isValidCode
+                    isSaving || (selectedFile.content || "") === unsavedContent || !isValidCode
                   }
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${
-                    selectedFile.content !== unsavedContent && isValidCode
+                    isSaving
+                      ? "bg-emerald-500/20 text-emerald-500 cursor-wait"
+                      : (selectedFile.content || "") !== unsavedContent && isValidCode
                       ? "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
                       : "text-slate-600 bg-transparent cursor-not-allowed opacity-50"
                   }`}
                 >
-                  <Save size={14} /> Save
+                  {isSaving ? (
+                    <RefreshCw className="animate-spin" size={14} />
+                  ) : (
+                    <Save size={14} />
+                  )}
+                  <span>{isSaving ? "Saving..." : "Save"}</span>
                 </button>
                 <div className="h-4 w-px bg-border mx-1"></div>
                 <button
@@ -707,7 +799,7 @@ function ProjectDetails() {
                         </h3>
                         <p className="text-sm text-slate-400 mt-1">
                           Scan completed on{" "}
-                          {new Date(scan.timestamp).toLocaleString()}
+                          {new Date(scan.created_at).toLocaleString()}
                         </p>
                       </div>
                       <div className="flex gap-8 px-6 py-2 bg-slate-900 rounded-lg border border-border">
@@ -1036,7 +1128,7 @@ function ProjectDetails() {
                                   )}
                                 </div>
                                 <div className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mt-0.5">
-                                  {new Date(hScan.timestamp).toLocaleString(undefined, {
+                                  {new Date(hScan.created_at).toLocaleString(undefined, {
                                     dateStyle: 'medium',
                                     timeStyle: 'short'
                                   })}
