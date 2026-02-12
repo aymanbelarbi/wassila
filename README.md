@@ -23,8 +23,8 @@ CREATE DATABASE wassila;
 
 ```bash
 cd backend
-composer install
 cp .env.example .env
+composer install
 ```
 
 Edit `backend/.env` file and set your database:
@@ -54,8 +54,8 @@ Backend is ready at: http://localhost:8000
 
 ```bash
 cd frontend
-npm install
 cp .env.local.example .env.local
+npm install
 ```
 
 Edit `frontend/.env.local` file:
@@ -73,13 +73,13 @@ Then run:
 npm run dev
 ```
 
-Frontend is ready at: http://localhost:5173
+Frontend is ready at: http://localhost:3000
 
 ---
 
 ## Step 5: Start Using
 
-1. Open http://localhost:5173
+1. Open http://localhost:3000
 2. Register a new account
 3. Create a project
 4. Add your code files
