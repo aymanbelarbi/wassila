@@ -81,7 +81,7 @@ function Dashboard() {
             .slice(0, 10)
             .reverse()
             .map((s) => ({
-              name: new Date(s.created_at).toLocaleDateString(undefined, {
+              name: new Date(s.created_at).toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
               }),
@@ -352,7 +352,7 @@ function Dashboard() {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex flex-col items-center justify-center text-slate-500 w-full">
+              <div className="flex flex-col items-center justify-center text-slate-500 w-full h-full">
                 <PieIcon size={48} className="mb-2 opacity-20" />
                 <p className="text-sm">No issues detected across your active files.</p>
               </div>
@@ -416,11 +416,11 @@ function Dashboard() {
                           </p>
                           <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
                             <span>
-                              {new Date(scan.created_at).toLocaleDateString()}
+                              {new Date(scan.created_at).toLocaleDateString("en-US")}
                             </span>
                             <span className="w-1 h-1 bg-slate-700 rounded-full"></span>
                             <span>
-                              {new Date(scan.created_at).toLocaleTimeString([], {
+                              {new Date(scan.created_at).toLocaleTimeString("en-US", {
                                 hour: "2-digit",
                                 minute: "2-digit",
                               })}

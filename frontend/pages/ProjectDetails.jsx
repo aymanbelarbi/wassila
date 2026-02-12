@@ -799,7 +799,7 @@ function ProjectDetails() {
                         </h3>
                         <p className="text-sm text-slate-400 mt-1">
                           Scan completed on{" "}
-                          {new Date(scan.created_at).toLocaleString()}
+                          {new Date(scan.created_at).toLocaleString("en-US")}
                         </p>
                       </div>
                       <div className="flex gap-8 px-6 py-2 bg-slate-900 rounded-lg border border-border">
@@ -1128,7 +1128,7 @@ function ProjectDetails() {
                                   )}
                                 </div>
                                 <div className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mt-0.5">
-                                  {new Date(hScan.created_at).toLocaleString(undefined, {
+                                  {new Date(hScan.created_at).toLocaleString("en-US", {
                                     dateStyle: 'medium',
                                     timeStyle: 'short'
                                   })}

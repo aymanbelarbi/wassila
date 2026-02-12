@@ -202,7 +202,7 @@ function ProjectCreate() {
                       {project.name}
                     </h3>
                     <p className="text-slate-500 text-xs mb-4">
-                      Created {new Date(project.created_at).toLocaleDateString()}
+                      Created {new Date(project.created_at).toLocaleDateString("en-US")}
                     </p>
 
                     <div className="mt-auto pt-4 border-t border-border flex items-center justify-between text-sm">

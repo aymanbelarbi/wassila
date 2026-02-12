@@ -286,7 +286,7 @@ function Projects() {
                       </h3>
                       <p className="text-slate-500 text-[10px] mb-5 flex items-center gap-1.5 font-mono">
                         <Clock size={12} />{" "}
-                        {new Date(project.created_at).toLocaleDateString()}
+                        {new Date(project.created_at).toLocaleDateString("en-US")}
                       </p>
                     </div>
 

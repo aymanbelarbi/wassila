@@ -82,7 +82,7 @@ function History() {
                     </td>
                     <td className="px-4 md:px-6 py-4 text-slate-500 flex items-center gap-2">
                       <Clock size={14} />
-                      {new Date(scan.created_at).toLocaleString()}
+                      {new Date(scan.created_at).toLocaleString("en-US")}
                     </td>
                     <td className="px-4 md:px-6 py-4">
                       <span
