@@ -30,26 +30,26 @@ Linux:
 - Ubuntu/Debian:
 
 ```bash
-sudo apt install docker.io docker-compose
+sudo apt install docker.io docker-compose-plugin
 ```
 
 - Fedora:
 
 ```bash
-sudo dnf install docker docker-compose
+sudo dnf install docker docker-compose-plugin
 ```
 
 - Arch:
 
 ```bash
-sudo pacman -S docker docker-compose
+sudo pacman -S docker docker-compose-plugin
 ```
 
 Check if installed:
 
 ```bash
 docker --version
-docker-compose --version
+docker compose rsion
 ```
 
 ---
@@ -110,7 +110,7 @@ Save the file.
 Open Terminal/Command Prompt in project folder and run:
 
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 
 Wait until it finishes, then open your browser and go to:
@@ -123,38 +123,38 @@ Wait until it finishes, then open your browser and go to:
 Check if everything is running:
 
 ```bash
-docker-compose ps
+docker compose ps
 ```
 
 Stop the project:
 
 ```bash
-docker-compose down
+docker compose down
 ```
 
 View logs:
 
 ```bash
-docker-compose logs -f
+docker compose logs -f
 ```
 
 Reset everything (delete database):
 
 ```bash
-docker-compose down -v
-docker-compose up --build
+docker compose down -v
+docker compose up --build
 ```
 
 View specific service logs:
 
 ```bash
-docker-compose logs backend    # Backend logs
-docker-compose logs mysql      # Database logs
-docker-compose logs frontend   # Frontend logs
+docker compose logs backend    # Backend logs
+docker compose logs mysql      # Database logs
+docker compose logs frontend   # Frontend logs
 ```
 
 Linux users: Add sudo before each command:
 
 ```bash
-sudo docker-compose ps
+sudo docker compose ps
 ```
