@@ -74,7 +74,7 @@ services:
     command: npm run dev -- --host 0.0.0.0
 
 volumes:
-  mysql_data:
+  mysql-data:
 
 networks:
   wassila-net:
